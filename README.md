@@ -1,0 +1,4 @@
+iQ
+==
+
+iXBRL Query Language
