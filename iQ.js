@@ -51,14 +51,13 @@ Link:
 
 /*
 Why:
-	
+	To quickly find all elements
 Link:
 	http://www.xbrl.org/Specification/inlineXBRL-part1/REC-2010-04-20/inlineXBRL-part1-REC-2010-04-20.html#table-inlinexbrlelements
 Note:
 	These are "Inline XBRL Elements". Any element not in this list is called a "Markup Element"
 */
- iQ.el =
- [
+ iQ.el = [
 'denominator'
 ,'exclude'
 ,'footnote'
@@ -73,28 +72,36 @@ Note:
 ,'tuple'
 ];
 
+/*
+Why:
+	To find relevant attributes from elements.
+Link:
+	http://www.xbrl.org/Specification/inlineXBRL-part1/REC-2010-04-20/inlineXBRL-part1-REC-2010-04-20.html#table-inlinexbrlattributes
+Note:
+	These are "Inline XBRL Attributes". They are not namespaced in the spec.
+*/
 iQ.att =[
 
-	'arcrole
-	'contextRef
-	'decimals
-	'escape
-	'footnoteID
-	'footnoteLinkRole
-	'footnoteRefs
-	'footnoteRole
-	'format
-	'id'
-	'name'
-	'precision'
-	'order'
-	'scale'
-	'sign'
-	'target'
-	'title'
-	'tupleID'
-	'tupleRef'
-	'unitRef'
+	'arcrole',
+	'contextRef',
+	'decimals',
+	'escape',
+	'footnoteID',
+	'footnoteLinkRole',
+	'footnoteRefs',
+	'footnoteRole',
+	'format',
+	'id',
+	'name',
+	'precision',
+	'order',
+	'scale',
+	'sign',
+	'target',
+	'title',
+	'tupleID',
+	'tupleRef',
+	'unitRef',
 ];
 
 
