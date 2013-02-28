@@ -1,13 +1,63 @@
 
 if (!iQ)
 {
+var iQ = {};
 console.log('Created global iQ object')
-iQ = function(options){
 
-	
-};
+	iQ = function(oOptions){
+
+	this.setOptions(oOptions);
+	this.bindEvents();
+	//this.initiXbrl();
+	this.initThis();
+	this.addResourceTable();
+
+	}
+}
+
+iQ.prototype.setOptions = function(oOptions)
+{
 
 
+//TODO: Do we need to rely on jQuery?
+this.o = $.extend(
+				{
+					url:'http://www.xbrl.org/inlinexbrlextractortutorial/MassiveDynamic.html',
+					inflate:true,
+					loadDts:false,
+					types: [], //Means to use iQ.el
+					sortBy: 'dom',
+					strict: false,
+					target: 'body'
+				}, 
+				oOptions);
+
+}
+
+iQ.prototype.bindEvents = function()
+{
+
+
+
+}
+
+iQ.prototype.initThis = function()
+{
+this.processHeader();
+
+}
+
+iQ.prototype.initiXbrl = function()
+{
+/*
+	$.ajax({
+		type: 'GET'
+		url: this.o.url,
+
+	});
+*/
+
+$(this.o.target).load(this.o.url, function(){console.log('Loaded iXBRL');});
 }
 
 
@@ -104,7 +154,7 @@ iQ.att =[
 	'title',
 	'tupleID',
 	'tupleRef',
-	'unitRef',
+	'unitRef'
 ];
 
 
@@ -118,3 +168,92 @@ iQ.att =[
 		}
   	return q;
   }();
+
+iQ.prototype.addResourceTable= function () {
+
+$('<table>')
+.append(
+
+	$('<tr>')
+		.append(
+			$('<th>').text('ContextRef'),
+			$('<th>').text('Context Start'),
+			$('<th>').text('Context End'),
+			$('<th>').text('Context Instant')
+			)
+		,
+	$.map(	this.contextRef, 
+			function(value, key)
+			{ 
+				return $('<tr>').append(
+				$('<td>').text(key),
+				$('<td>').text(value.period.startDate),
+				$('<td>').text(value.period.endDate),
+				$('<td>').text(value.period.instant))
+			}
+		)
+	).appendTo($(this.o.target));
+};
+
+  iQ.prototype.processHeader = function()
+  {
+  	
+
+
+		this.contextRef = {};
+
+  	$('ix\\:header').find('xbrli\\:context').each(
+  		$.proxy(
+  		function(index, domContext){
+  				jContext = $(domContext);
+
+  				oContext = {};
+  				oContext.entity = {};
+  				oContext.period = {};
+  				oContext.segment= {};
+  				//oContext.scenario = {};
+
+
+  				sContextId = jContext.attr('id');
+
+  				jEntityIdentifier = jContext.find('xbrli\\:entity>xbrli\\:identifier');
+  				oContext.entity.identifier = jEntityIdentifier.text();
+  				oContext.entity.scheme =	 jEntityIdentifier.attr('scheme'); 
+
+  				jPeriod = jContext.find('xbrli\\:period');
+  				lPeriods = ['startDate', 'endDate', 'instant']
+  				for (i in lPeriods)
+  				{
+  					sEl = lPeriods[i];
+  					jEl = jPeriod.find('xbrli\\:' + sEl);
+  					oContext.period[sEl] =  jEl.length>0? new Date(jEl.text()): '';
+				
+				}
+  				jSegment = jContext.find('xbrli\\:segment');
+  				jSegment.find('xbrldi\\:explicitmember').each(
+  					function(index, domExplicitMember)
+  					{
+  						jExplicitMember = $(domExplicitMember);
+  						sAxis = jExplicitMember.attr('dimension');
+  						sMember = jExplicitMember.text();
+  						oContext.segment[sAxis] = sMember;
+  					})
+
+				this.contextRef[sContextId] = oContext;
+
+
+  		}, this));
+
+
+
+
+
+};
+
+$(document).ready(function(){
+
+
+
+
+	q = new iQ();
+})

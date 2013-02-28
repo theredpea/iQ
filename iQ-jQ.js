@@ -49,33 +49,32 @@ $('#iXBRL').iQ()
 			});
 
 
-//QUERIES ON ELEMENT NAME
-//Illustrates strings vs regexing
-//Regexes are a DSL in themselves. 
-//+They make queries more compact, and performance is faster
-//-They make queries less readable
-
 //ELEMENT SYNTAX
 
 	//NAMESPACES
 	//When referring to the element name, I mean the prefix-qualified element name, colon-delimited (not underscore delimited)
 	//What else is there?
-	//The element us-gaap:Cash...
-		//It is definitely not named "CashMoney" or "Argent"
-		//It's fair to say it is named...
-			//"Cash" 									// iQ calls this the unqualified element name
-			//"us-gaap:Cash" 							// iQ calls this the prefix-qualified element name
-			//"http://{us-gaap-namespace-url}:Cash" 	//iQ calls this the namespace-qualified element name
+	//Let's talk about the element us-gaap:Cash...
+		//It is definitely NOT named "CashMoney" or "Argent"
+		//It's fair to say it IS named...
+			//"Cash" 									// 	iQ calls this the unqualified name
+			//"us-gaap:Cash" 							// 	iQ calls this the prefix-qualified name
+			//"http://{us-gaap-namespace-url}:Cash" 	//	iQ calls this the url-qualified name, or the namespace-qualified name
 		//iQ encourages the second approach, the prefix-qualified element name
-			//As of this writing, prefix-qualified is the most common practice to refer to elements
+			//As of this writing, prefix-qualified is the most common practice to refer to elements (though iQ prefers colons to underscores)
 			//prefix-qualified strikes a balance between being terse, but qualifying elements to prevent confusion (see: collision)
-			//And 
-	//So the element 'us-gaap:Cash'
-	//If you want to  
+			//And the most important reason: 
+				//While the spec says the name is specified in the name attribute, which must be the QName type http://www.w3.org/TR/xmlschema-2/#QName
+				//The spec examples all use prefixes http://www.xbrl.org/Specification/inlineXBRL-part1/CR-2009-11-16/inlineXBRL-part1-CR-2009-11-16.html#d1e6297
+				//I'm confused here, the value-space of QNames must have URI's, but the lexical space allows anything that maps to the value-space
+	//If none of this makes sense, check out the difference between prefixes and namespaces in this iXBRL table http://www.xbrl.org/Specification/inlineXBRL-part1/CR-2009-11-16/inlineXBRL-part1-CR-2009-11-16.html#sec-prefixes
+		//And read more about why namespaces are used, here {}
+		//If you don't care, skip to "Element String Syntax"
+	//iQ does not require that namespace "maps" exist to go from lexical to value (i.e. to go from prefix to namespace URI)
+	//In other words, it will help you find the element with the prefix-qualified name "taxes:MortgageInterestDeduction", even if the iXBRL document doesn't describe what "taxes" represents! (indeed it's ambiguous! Is it some IRS taxonomy? Who defines this element?!)
+	//....Unless it is in strict mode
+	iQ({'strict':true})
 
-	//STRING SYNTAX
-	//String syntax, where the user gives string 's' is equivalent to object syntax {name: {is: {s}}}
-	iQ().element('Cash')
 
 	//OBJECT SYNTAX
 	//Currently, we can only search on the element name
@@ -83,6 +82,13 @@ $('#iXBRL').iQ()
 	//But that requires parsing linkbases, we'll do it later.
 	iQ().element(
 		{'name': {StringQuery}});
+
+
+
+	//STRING SYNTAX
+	//String syntax, where the user gives string 's' is equivalent to object syntax {name: {contains: {s}}}
+	iQ().element('Cash')
+
 
 
 //STRING QUERIES
