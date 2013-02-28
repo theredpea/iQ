@@ -1,11 +1,14 @@
-function ($) 
+
+if (!iQ)
 {
-	$.fn.iQ = function() {
+console.log('Created global iQ object')
+iQ = function(options){
 
-	}
+	
+};
 
 
-}(jQuery);
+}
 
 
 iQ.format = function() 
