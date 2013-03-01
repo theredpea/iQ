@@ -11,7 +11,7 @@ console.log('Created global iQ object')
 	//this.initiXbrl();
 	this.initThis();
 	this.addResourceTable();
-
+this.alliX();
 	}
 }
 
@@ -110,20 +110,18 @@ Link:
 Note:
 	These are "Inline XBRL Elements". Any element not in this list is called a "Markup Element"
 */
- iQ.el = [
-'denominator'
+ iQ.el = ['nonFraction'
+,'nonNumeric'
+,'denominator'
 ,'exclude'
 ,'footnote'
 ,'fraction'
 ,'header'
 ,'hidden'
-,'nonFraction'
-,'nonNumeric'
 ,'numerator'
 ,'references'
 ,'resources'
-,'tuple'
-];
+,'tuple'];
 
 /*
 Why:
@@ -159,15 +157,27 @@ iQ.att =[
 
 
 
-  iQ.iX = function(){
-  	u = iQ.el;
+  iQ.prototype.iX = function(){
+  	u = iQ.el.slice(0);
   	q=[];
-  	for (e in u)
+  	for (i in u)
 		{
-			q.push('ix\\:' + e);
+			q.push('ix\\:' + u[i]);
 		}
   	return q;
   }();
+
+
+  iQ.prototype.alliX = function()
+  {
+  	lPreQualElements = this.iX.slice(0);
+  	sPreQualElements = lPreQualElements.join(',');
+  	jPreQualElements = $(sPreQualElements);
+  	jPreQualElements.css('background-color', 'yellow');
+
+  }
+
+
 
 iQ.prototype.addResourceTable= function () {
 
@@ -194,6 +204,8 @@ $('<table>')
 		)
 	).appendTo($(this.o.target));
 };
+
+
 
   iQ.prototype.processHeader = function()
   {
