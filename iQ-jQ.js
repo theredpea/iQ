@@ -87,6 +87,13 @@ $('#iXBRL').iQ()
 
 	//STRING SYNTAX
 	//String syntax, where the user gives string 's' is equivalent to object syntax {name: {contains: {s}}}
+	//Contains it the most forgiving operation
+	//Because it can be difficult to remember some long/technical element ID's completely.
+	//At some point, we want to support more abstract searches, like a search engine (Google)
+	//1) Supporting space-delimited keywords
+	//2) And searching all labels for matches of these keywords
+	//3) And hopefully keeping record of searches and pairing these with the results which satisfied users, to improve a search algorithm.
+
 	iQ().element('Cash')
 
 
@@ -137,7 +144,15 @@ $('#iXBRL').iQ()
 
 //QUERIES ON OTHER ELEMENT INFORMATION
 //Illustrates internal logic
+//When a method can search on multiple ATTRIBUTES (like an element's name, definition, and (... more to come))
+//Or when a method can apply multiple OPERATORS (like eq, gt, lt)
+//Unless otherwise specified, it will use OR LOGIC
+	//This can be changed (but this is not supported/recommended?) by using the logic attribute, 
+	//which can take values 'and' or 'or' -- case insensitive
 
+//DEFAULT value for element is OR, because I think people will do that more commonly;
+//i.e. they want to quickly search all element labels
+//EQUIVALENT
 $('#iXBRL').iQ()
 		.element(
 			{name:
@@ -160,13 +175,53 @@ $('#iXBRL').iQ()
 			});
 
 
+//DEFAULT value for spanOfTime is AND, because I think people will do that more commonly.
+//i.e. they want to capture all instant values within a range
+//If I used internal OR, this spanOfTime filter would be useless; greater than 2013/03/31, OR less than 2013/06/30... is effectively all dates.
+$('#iXBRL').iQ()
+		.spanOfTime(
+			{gt:'2013/03/31'
+				lt:'2013/06/30');
+
+
+$('#iXBRL').iQ()
+		.element(
+			{	name:
+				{contains:"Assets"},
+		
+				def:
+				{contains:"Assets"}
+			});
+
+
+
+
+//SEARCHING 
+//Element aspect ANY
+//If the word "Assets" was found in any of the element atributes (name, any of the labels (including documentation))
+
 $('#iXBRL').iQ()
 		.element(
 			{	any:
 				{contains:"Assets"}			
 			});
 
+//SEARCHING 
+//Element aspect ALL
+//If the word "Assets" was found in all of the element atributes (name, all of the labels (including documentation))
+
+$('#iXBRL').iQ()
+		.element(
+			{	all:
+				{contains:"Assets"}			
+			});
+
+
+
+
 //QUERIES ON DATES
+//ONLY Keyword
+//Using only property on pointInTime method or spanOfTime method will exclude all results which are not instant elements (if pointInTime is used) or duration elements (if spanOftime is used)
 //Only instant values
 iQ()
 	.pointInTime(
@@ -182,6 +237,9 @@ iQ()
 
 //POINT IN TIME SYNTAX
 //After 2013-03-31
+//Can pass a string; iQ will simply instantiate a date with it
+//Can pass a Date object
+//Or can use the iQ.pointInTime method which, at this point, is just an alias for a date (But may be enhanced in the future to accommodate more syntax)
 //EQUIVALENT
 iQ()
 	.pointInTime(
@@ -198,17 +256,17 @@ iQ()
 		{'gt': iQ.pointInTime('2013-03-31')}
 		)
 
-	//HOW DOES POINT OF TIME HANDLE DURATION VALUES
-	//For example, Revenue, for Q2 as defined in above dateBook
-	//It uses the END DATE of the duration
+	//HOW DOES POINT OF TIME HANDLE DURATION ELEMENTS
+	//For example, IXDS contains Revenue, for Q2 as defined in  dateBook 'Q2': iQ.spanOfTime('2013-04-01', '2013-06-30'),
+	//pointInTime queries which do NOT specify 'only' apply their search to the END DATE of any values which use DURATION elements
 	iQ()
 		.pointInTime({'gt':'2013-07-01'})  			// Since the Revenue ENDS on 2013-06-30, will not find it
-		.pointInTime({'gt':'Q2'})  					// Since the Revenue ENDS on 2013-06-30, and Q2 also does, will not find it
+		.pointInTime({'gt':'Q2.endDate'})  			// Since the Revenue ENDS on 2013-06-30, and Q2 also does, will not find it
 		.pointInTime({'gt':'2013-06-30'})  			// will not find it
 
 //POINT IN TIME GT
 //There is no explicit greaterThanOrEqual (gte)
-//1) Because gte:2013-03-05 is more-or-less equivalent to gt:2013-03-04. Therefore users can typically adjust their queries to use gt, and achieve the same. If you disagree, let me know your use case.
+//1) Because gte:2013-03-05 is more-or-less equivalent to gt:2013-03-04. Therefore users can  adjust their queries to use gt, and achieve the same. If you disagree, let me know your use case.
 //2) Even if we want to support gte use cases, I hope to do so using the implicit internal OR operator and this syntax:
 
 iQ()
@@ -230,9 +288,13 @@ iQ({
 		},
 		'pointsInTime'
 
-			'Q1.startDate': '2013-01-01', //This is redundant - the dateBook will automatically create startDate and endDate points in time for every span of Time object. If you create dates with these names, you'll overwrite the dateBooks.
+			'Q1.startDate': '2013-01-01', //This is redundant - the dateBook will automatically create startDate and 
+											//endDate points in time for every span of Time object. 
+											//If you create dates with these names, you'll overwrite the dateBooks.
+											//Notice the syntax for these pointsInTime: {Q1}.endDate, {Q1}.startDate
+
 			'FooBarMerger': '2013-05-01', //Remember specific points in time
-			'2013_earnings'	'2013-06-02'  //As a general convention, use underscores (_) to separate words, orUseCapitalizationLikeThis, but don't use dots (.) -- they're reserved for automatic points in time
+			'2013_earnings'	'2013-06-02'  //As a general convention, use underscores (_) to separate words, orUseCapitalizationLikeThis, but don't use dots (.) -- they're reserved for automatic points in time, like Q1.startDate
 		}
 	}
 	)
@@ -269,12 +331,13 @@ iQ
 //The first one in each list is the ultimate key for functions of properties within iQ
 //Arrange this properly
 iQ.synoyms={
+['element', 'concept', 'account'],
 ['eq', 'equalTo'],
 ['lt', 'lessThan'],
 ['gt', 'greaterThan'],
-['tspan', 'spanOfTime', 'duration'],
-['tpoint', 'pointInTime', 'instant'],
-['def', 'definition'],
+['tspan', 'spanOfTime', 'duration', 'in'],
+['tpoint', 'pointInTime', 'instant', 'at'],
+['def', 'definition', 'doc', 'documentation'],
 ['dim', 'member', 'subcategory'],
 };
 
