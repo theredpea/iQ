@@ -279,22 +279,33 @@ iQ()
 //DATEBOOK 
 //To give pointInTime and spanOfTime nicknames
 //So they are easier to remember and repeat
+//In fact this is like the xbrli:context elements
+//Which have a contextId (in the case of datebook, that is the *key*)
+//And they describe instants, or startDate-endDate pairs (in the case of dateBook, these are *values*)
+
+//I expect I will start collecting these artifacts, if users make them on a site that I manage.
+//i.e. they can start giving helpful nicknames to Google's important dates
+//I'm sure there are algorithms/patterns to these dates, so I can extrapolate ALL Google dates
+//For calendar-year companies, that's usually very simple; i.e. a generic dateBook would have Q1 on 1/1-3/31, etc
+//But for off-calendar companies (retail), it's nic efor users to supply their stuff to me
+//Then there can be a universal dateBook.
 iQ({
 	'dateBook': 
-	{	'spansOfTime':
+	{	'spansOfTime':  		//Maybe it's unnecessary to nest durations under spansnOfTime, and instants under pointsInTime, maybe better to just figure it out?
 		{	'Q1': iQ.spanOfTime({ start:'2013-01-01', end:'2013-03-31'}), //or iQ.spanOfTime('2013-01-01', '2013-03-31')
 			'Q2': iQ.spanOfTime('2013-04-01', '2013-06-30'),
 			'Q3_2013': iQ.spanOfTime('2013-07-01', '2013-09-30') //Probably a good idea to specify the year; so this date book can be used for your company in other years
 		},
 		'pointsInTime'
-
+		{
 			'Q1.startDate': '2013-01-01', //This is redundant - the dateBook will automatically create startDate and 
-											//endDate points in time for every span of Time object. 
-											//If you create dates with these names, you'll overwrite the dateBooks.
-											//Notice the syntax for these pointsInTime: {Q1}.endDate, {Q1}.startDate
+											//endDate points in time for every span of Time object. you create
+											//If you create dates with these names, you'll *overwrite* the dateBooks, and cause general ambiguity for any other user who wants to use your dateBook
+											//Notice the syntax for these pointsInTime: {spanOfTimeName}.endDate, {spanOfTimeName}.startDate
+											//In this case, 'Q1.startDate', the 'Q1' represents the first spanOfTime defined above.
 
-			'FooBarMerger': '2013-05-01', //Remember specific points in time
-			'2013_earnings'	'2013-06-02'  //As a general convention, use underscores (_) to separate words, orUseCapitalizationLikeThis, but don't use dots (.) -- they're reserved for automatic points in time, like Q1.startDate
+			'FooBarMerger': '2013-05-01', //Remember specific points in time, like when this company merged with FooBar
+			'2013_earnings_announcement'	: '2013-06-02'  //As a general convention, use underscores (_) to separate words, orUseCapitalizationLikeThis, but don't use dots (.) -- they're reserved for automatic points in time, like Q1.startDate
 		}
 	}
 	)
@@ -308,16 +319,96 @@ iQ({
 
 
 //SPAN OF TIME SYNTAX
-//Spans of time can represent simply some length of time
+//Spans of time can represent simply some length of time 
+		//iQ iwll call this a sliding duration, aka a fluid duration, because it represents a length of time without specifying when that length of time starts or ends in history 
 //Example: all datapoints for periods of time equal to 1 quarter, returns Q1, Q2, Q3
-//They can also represent lengths of time starting and ending at particular points of time
+//They can also represent lengths of time starting and ending at particular points of time 
+			//iQ will call this a fixed duration, aka book-ended duration, aka an anchored duration, because it is book-ended by specific dates (fixed in time) (instead of just some generic duration of time)
 //Example: all datapoints for periods of time equal to 1 quarter, starting 1/1, ending 3/31, returns only Q1
 
+//Will iQ support both ideas of duration? (i.e. both a fluid/sliding duration, and a bookended/anchored duration?)
+//Or will iQ only support the fluid/sliding duration (Easier to do; simply compare the lengths of duration)
+//The most important considerations in making this decision:
+//1) Will spanOfTime and pointOfTime be able to work together? i.e. can the user .spanOfTime.and.pointOfTime to achieve the idea of an anchored dictionary, given pointOfTime's treatment for durations (i.e. using the end-date?)
+//2) What will the OPERATORS  mean for a spanOfTime? i.e. does 'gt' or 'lt' compare simply the length of the duration, 'gt' finds durations which are longer than the user's input, and 'lt' find durations which are shorter...
+//...2) ... Or will 'gt' ALSO try to identify the anchors of the duration; i.e. 'gt' doesn't just require a longer duration, but one whose start date is also *after* (greater than) the user's input?
 
-iQ
-	.spanOfTime({'gt': '3M'}) 					//Use ISO 8601 format; (Ctrl+F... B.2.4 here http://dotat.at/tmp/ISO_8601-2004_E.pdf)
+//Answer:
+//iQ (and iQ's spanOfTime object, which is to Javascript what TimeSpan (http://msdn.microsoft.com/en-us/library/system.timespan.aspx) 
+	//is to C#) will accommodate BOTH
+//ISO8601 format contemplates both ideas of a spanOfTime, aka time interval; (Ctrl+F... B.2.4 here http://dotat.at/tmp/ISO_8601-2004_E.pdf)
+//Notice this format: YYYYMMDDThhmm,mZ/YYYYMMDDThhmm,m
+	//Since it specifies the "bookend" dates, this is a fixed duration;
+	//an iQ span of time object will remember a startDate, and endDate, and can compute the duration (in seconds? minutes? hours? ... something)
+//Notice this format: PnnnD
+	//Since it only specifies the "length of time" -- the duration; this is a fluid duration
+	//an iQ span of time object will convert the string to an integer duration value (Seconds? minutes? hours? object of all of these? Javascript uses miliseconds), but will not know a startDate and endDate
+oneYear= new Date('2013')-new Date('2012');
+console.log(oneYear);//31622400000
+console.log(oneYear/1000/60/60/24); //Conver to seconds, then minutes, then hours, then days... outputs 366.
 
 
+
+
+//SPAN OF TIME SYNTAX
+//Create a fixed duration
+//STRING SYNTAX / DATE SYNTAX
+//Two parameters...
+// which are simply passed to a new Date() constructor, which will make whatever assumptions it does in your Javascript implementation
+	iQ.spanOfTime('2013', '2012') 
+	//Or two dates
+	iQ.spanOfTime(new Date('2013'), new Date('2012'))
+	//Or two points of time;  t his is just an alias for a new Date constructor
+	iQ.spanOfTime(iQ.pointInTime('2013'), iQ.pointInTime('2012'))
+//NOTE: The above objects will be able to derive the length of time:
+Q3 =  iQ.spanOfTime('2012', '2013');
+console.log(Q3.duration);
+//This will output the equivalent of 1Y, the difference between 2012 and 2013; 
+//Equivalent to: 
+//new Date('2013')-new Date('2012')
+//31622400000
+
+//One parameter... string... considered the length of time if it matches ISO 8601 format
+iQ.spanOfTime('P5Y2M3D'); //This syntax may be wrong, but it's the general idea
+//Note, the above will not have any startDate or endDate, they will be explicitly set to null
+
+//OBJECT SYNTAX
+//One parameter can specify any of the three core attributes, startDate, endDate, duration
+//duration can be a string or a length, in MS
+//It doesn't make sense to specify only one parameter, unless that parameter is duration. i.e. startDate on its own, is useless, ditto endDAte
+//Therefore, if only duration is specified, spanOfTime will become a fluid duration
+//It doesn't make sense to specify three parameters (startDate and endDate) AND a duration -- that's redundant.
+//Therefore, given any two of three parameters, a spanOfTime will calculate the third, and will become a complete fixed duration
+
+iQ.spanOfTime({startDate: '2012', endDate: '2013'}) //Creates a fixed duration
+		//Equivalent to:
+		iQ.spanOfTime({startDate: '2012', duration:31622400000}) 
+		//Or:
+		iQ.spanOfTime({endDate: '2013', duration:31622400000}) 
+		//And equivalent to more compact STRING SYNTAX:
+		iQ.spanOfTime('2012', '2013'})
+
+iQ.spanOfTime({duration:31622400000}) //Creates a fluid duration, since no startDate or endDate is specified
+
+		//equivalen to more compact DOUBLE SYNTAX:
+		iQ.spanOfTime(31622400000)
+		//or STRING SYTNAX:
+		iQ.spanOfTime('1Y')
+
+iQ.spanOfTime({startDate: '2012'}) // Not enough information
+
+iQ.spanOfTime({startDate: '2012', endDate: '2013', duration:31622400000}) //Redundant. spanOfTime will always calculate its own duration if given a startDate and endDate; 
+//NOTE: the spanOfTime calculated duration that will overwrite the user-provided duration.
+
+//Now you know the syntax, and you know how to create a fluid duration, and a fixed duration
+//The OPERATORS of spanOfTime queries / filters will work differently depending on whether they are passed a fluid or fixed duration
+//If given a fluid duration, 'gt' simply means, return XBRL values whose duration represents a longer amount of time, regardless of when that duration started and ended
+//If given a fixed duration, 'gt' means the same as fluid duration, AND further filters the results to only include those whose XBRL startDate is ALSO greater than the start Date (this logically means the same for the endDate, since the duration is gt)
+//I expect that the fluid duration queries/filters will be more useful; i.e. find all values for the length of a quarter
+//But fixed duration queries/filters could also be useful; i.e. find all values for the length of a quarter, and they must start after the start date of Q2.
+
+
+iQ.spanOfTime({'gt': '3M'}) 				//This is not 	//Use ISO 8601 format; 
 
 
 //SYNONYMS
@@ -335,7 +426,7 @@ iQ.synoyms={
 ['eq', 'equalTo'],
 ['lt', 'lessThan'],
 ['gt', 'greaterThan'],
-['tspan', 'spanOfTime', 'duration', 'in'],
+['tspan', 'spanOfTime', 'duration', 'of'],
 ['tpoint', 'pointInTime', 'instant', 'at'],
 ['def', 'definition', 'doc', 'documentation'],
 ['dim', 'member', 'subcategory'],
