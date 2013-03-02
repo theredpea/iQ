@@ -404,11 +404,73 @@ iQ.spanOfTime({startDate: '2012', endDate: '2013', duration:31622400000}) //Redu
 //The OPERATORS of spanOfTime queries / filters will work differently depending on whether they are passed a fluid or fixed duration
 //If given a fluid duration, 'gt' simply means, return XBRL values whose duration represents a longer amount of time, regardless of when that duration started and ended
 //If given a fixed duration, 'gt' means the same as fluid duration, AND further filters the results to only include those whose XBRL startDate is ALSO greater than the start Date (this logically means the same for the endDate, since the duration is gt)
-//I expect that the fluid duration queries/filters will be more useful; i.e. find all values for the length of a quarter
-//But fixed duration queries/filters could also be useful; i.e. find all values for the length of a quarter, and they must start after the start date of Q2.
+	//I expect that the fluid duration queries/filters will be more useful; i.e. find all values for the length of a quarter, (greater than 80 days and less than 100 days.) regardless of when they start, 
+	//But fixed duration queries/filters could also be useful; i.e. find all values for the length of a quarter, and they must start after the start date of Q2.
 
 
-iQ.spanOfTime({'gt': '3M'}) 				//This is not 	//Use ISO 8601 format; 
+//SPANOFTIME INTERNAL LOGIC
+//Like POINTINTIME INTERNAL LOGIC, this uses and
+//To enable range filters, gt && lt
+//But be careful of ..
+//NONSENSE FLUID
+//Fluid durations will make either nonsense/no-overlap queries
+//Or nonsense/everything queries
+//Depending on internal logic, which is implicitly AND
+
+//No span of time is greater than 5 days AND less than 3 days
+iQ().spanOfTime({
+	gt: '5D',
+	lt:'3D'
+	//implicit logic:'and'
+})
+
+//All spans of time are either greater than 4 days OR  less than 5 days 
+iQ().spanOfTime({
+	gt: '4D',
+	lt:'5D',
+	logic:'or'
+})
+
+//SAMPLE QUERY: Find all values for a quarter, which is crudely estimated at 90 days, plus or minus 10 days
+iQ().spanOfTime({
+	gt: iQ.spanOfTime({duration:'80D'}),
+	lt: iQ.spanOfTime({duration:'100D'})
+})
+
+
+//ADVANCED FIXED
+//Remember the logic for gt when gt is given a fixed duration, it tests the length of the duration and  the start date of the duration
+//Our dateBook has Q1.startDate = 1/1/2013
+//So this returns all quarters that start after Q1 (Q2, Q3, Q4)
+iQ().spanOfTime({
+	gt: iQ.spanOfTime({duration:'80D', startDate:'Q1.startDate'}),
+	lt: iQ.spanOfTime({duration:'100D'})
+})
+
+//If not careful.... it's easy to...
+//NONSENSE FIXED
+//Because fixed durations bring pointsInTime back into the equation; i.e. the bookend dates
+//It's possible to make nonsense queries owing to the bookend dates
+iQ().spanOfTime({
+	gt: iQ.spanOfTime({duration:'80D', startDate:'Q1.endDate'}),
+	lt: iQ.spanOfTime({duration:'100D', startDate:'Q1.startDate'})
+})
+
+//An implicit AND
+//While it's possible to be goth gt 80D and lt 100D
+//It's not possible for the startDate to be gt Q1.endDate (3/31/2013)
+//And for the startDate to be lt the Q1.startDate (1/1/2013)
+
+
+
+
+//HOW DOES SPANOFTIME HANDLE INSTANT VALUES
+//Unless spanOfTime filter specifies only:true
+//Then the filter will return the instant XBRL value 
+//Let's suppose there are Assets as of 12/31/2013
+
+
+iQ.spanOfTime({'gt': '3M'}) 				//This is not 	using ISO 8601 format; 
 
 
 //SYNONYMS
