@@ -6,31 +6,152 @@ console.log('Created global iQ object')
 
 	iQ = function(oOptions){
 
-	this.setOptions(oOptions);
+	    this.setOptions(oOptions);
+	    this.processHeader();
+	    this.getElements();
 	this.bindEvents();
 	//this.initiXbrl();
 	this.initThis();
 	this.addResourceTable();
-this.alliX();
+    this.alliX();
 	}
 }
 
-iQ.prototype.setOptions = function(oOptions)
+
+
+iQ.prototype.setOptions = function (oOptions) {
+
+
+    //TODO: Do we need to rely on jQuery?
+    this.o = $.extend(
+                    {
+                        url: 'http://www.xbrl.org/inlinexbrlextractortutorial/MassiveDynamic.html',
+                        inflate: true,
+                        loadDts: false,
+                        types: [], //Means to use iQ.el
+                        sortBy: 'dom',
+                        strict: false,
+                        target: 'body'
+                    },
+                    oOptions);
+
+    this.contextRef = {};
+    this.oResultSet = [];
+    this.jResultSet = [];
+
+}
+
+
+
+iQ.prototype.getElements = function ()
 {
+    lPreQualElements = this.iX.slice(0);
+    sPreQualElements = lPreQualElements.join(',');
+    jPreQualElements = $(sPreQualElements);
+
+    this.jResultSet = jPreQualElements;
+
+    if (this.o.inflate)
+    {
+        this.jResultSet.each(
+            $.proxy(this.inflate, this));
+    }
+}
+
+iQ.prototype.inflate = function (index, result)
+{
+    jResult = $(result);
+    sContextID = jResult.attr('contextref');
+    cRef = this.contextRef[sContextID];
+    cSegment = cRef.segment;
+    if ($.isEmptyObject(cSegment)) {
+        cSegment = '';
+    }
+        cPeriod = cRef.period;
+        oResult = {            //this.getxObj(
+            'name'          : jResult.data('name', jResult.attr('name')).data('name'),
+            'startDate'     : jResult.data('startDate', cPeriod.startDate).data('startDate'),
+            'endDate'       : jResult.data('endDate', cPeriod.endDate).data('endDate'),
+            'instant'       : jResult.data('instant', cPeriod.instant).data('instant'),
+            'dimensions'    : jResult.data('dimensions', cSegment).data('dimensions')
+        };
 
 
-//TODO: Do we need to rely on jQuery?
-this.o = $.extend(
-				{
-					url:'http://www.xbrl.org/inlinexbrlextractortutorial/MassiveDynamic.html',
-					inflate:true,
-					loadDts:false,
-					types: [], //Means to use iQ.el
-					sortBy: 'dom',
-					strict: false,
-					target: 'body'
-				}, 
-				oOptions);
+
+    //the jResultSet
+        jResult.data('result', oResult);
+
+        this.oResultSet.push(oResult);
+
+        this.contextRef[sContextID].results.push(xObj);
+    
+
+
+}
+
+/*
+iQ.prototype.getxObj = function (options) {
+}*/
+
+
+iQ.prototype.element = function (oelementOptions) {
+    //TODO: Need not in oelementOptions
+    if (typeof oelementOptions == "string") {
+        //Implicitly runs
+        this.jResultSet.filter(this.StringQuery.contains);
+    }
+}
+
+if(!iQ.StringQuery) {iQ.StringQuery = {};}
+
+iQ.StringQuery.contains = function()
+{
+}
+
+
+iQ.prototype.getContextRef = function(index, domContext){
+{
+    
+        jContext = $(domContext);
+
+        oContext = {};
+        oContext.entity = {};
+        oContext.period = {};
+        oContext.segment = {};
+        oContext.results = []; //In inflate, this happens
+        //oContext.scenario = {};
+
+
+        sContextId = jContext.attr('id');
+
+        jEntityIdentifier = jContext.find('xbrli\\:entity>xbrli\\:identifier');
+        oContext.entity.identifier = jEntityIdentifier.text();
+        oContext.entity.scheme =	 jEntityIdentifier.attr('scheme'); 
+
+        jPeriod = jContext.find('xbrli\\:period');
+        lPeriods = ['startDate', 'endDate', 'instant']
+        for (i in lPeriods)
+        {
+            sEl = lPeriods[i];
+            jEl = jPeriod.find('xbrli\\:' + sEl);
+            oContext.period[sEl] =  jEl.length>0? new Date(jEl.text()): '';
+				
+        }
+        jSegment = jContext.find('xbrli\\:segment');
+        jSegment.find('xbrldi\\:explicitmember').each(
+            function(index, domExplicitMember)
+            {
+                jExplicitMember = $(domExplicitMember);
+                sAxis = jExplicitMember.attr('dimension');
+                sMember = jExplicitMember.text();
+                oContext.segment[sAxis] = sMember;
+            })
+
+        this.contextRef[sContextId] = oContext;
+
+
+    }
+
 
 }
 
@@ -170,9 +291,7 @@ iQ.att =[
 
   iQ.prototype.alliX = function()
   {
-  	lPreQualElements = this.iX.slice(0);
-  	sPreQualElements = lPreQualElements.join(',');
-  	jPreQualElements = $(sPreQualElements);
+
   	jPreQualElements.css('background-color', 'yellow');
 
   }
@@ -216,45 +335,7 @@ $('<table>')
 
   	$('ix\\:header').find('xbrli\\:context').each(
   		$.proxy(
-  		function(index, domContext){
-  				jContext = $(domContext);
-
-  				oContext = {};
-  				oContext.entity = {};
-  				oContext.period = {};
-  				oContext.segment= {};
-  				//oContext.scenario = {};
-
-
-  				sContextId = jContext.attr('id');
-
-  				jEntityIdentifier = jContext.find('xbrli\\:entity>xbrli\\:identifier');
-  				oContext.entity.identifier = jEntityIdentifier.text();
-  				oContext.entity.scheme =	 jEntityIdentifier.attr('scheme'); 
-
-  				jPeriod = jContext.find('xbrli\\:period');
-  				lPeriods = ['startDate', 'endDate', 'instant']
-  				for (i in lPeriods)
-  				{
-  					sEl = lPeriods[i];
-  					jEl = jPeriod.find('xbrli\\:' + sEl);
-  					oContext.period[sEl] =  jEl.length>0? new Date(jEl.text()): '';
-				
-				}
-  				jSegment = jContext.find('xbrli\\:segment');
-  				jSegment.find('xbrldi\\:explicitmember').each(
-  					function(index, domExplicitMember)
-  					{
-  						jExplicitMember = $(domExplicitMember);
-  						sAxis = jExplicitMember.attr('dimension');
-  						sMember = jExplicitMember.text();
-  						oContext.segment[sAxis] = sMember;
-  					})
-
-				this.contextRef[sContextId] = oContext;
-
-
-  		}, this));
+  		this.getContextRef, this));
 
 
 
