@@ -11,7 +11,6 @@ console.log('Created global iQ object')
 	    this.getElements();
 	this.bindEvents();
 	//this.initiXbrl();
-	this.initThis();
 	this.addResourceTable();
     this.alliX();
 	}
@@ -36,8 +35,9 @@ iQ.prototype.setOptions = function (oOptions) {
                     oOptions);
 
     this.contextRef = {};
+    this.unitRef = {};
+    this.nameRef = {};
     this.oResultSet = [];
-    this.jResultSet = [];
 
 }
 
@@ -49,41 +49,108 @@ iQ.prototype.getElements = function ()
     sPreQualElements = lPreQualElements.join(',');
     jPreQualElements = $(sPreQualElements);
 
-    this.jResultSet = jPreQualElements;
+    this.jAllSet = jPreQualElements.slice(0);
+    this.jResultSet = jPreQualElements.slice(0)
+    this.jExcludeSet = $('');
+    this.jResultSetTemp = [];
+    this.jExcludeSetTemp = [];
 
-    if (this.o.inflate)
-    {
+    
         this.jResultSet.each(
-            $.proxy(this.inflate, this));
-    }
+            $.proxy(this.getResults, this));
+    
 }
 
-iQ.prototype.inflate = function (index, result)
+iQ.prototype.inflate = function(oResult, jResult)
 {
-    jResult = $(result);
-    sContextID = jResult.attr('contextref');
-    cRef = this.contextRef[sContextID];
-    cSegment = cRef.segment;
+    if (jResult===undefined)
+    { return undefined;
+    }
+
+    $.each(oResult, function(propName, propValue){
+        jResult.data(propName, propValue);
+    });
+    jResult.data('result', oResult);
+}
+iQ.prototype.getResults = function (index, result)
+{
+    var jResult = $(result),
+    sContextId = jResult.attr('contextref') || 'none',
+    sUnitId = jResult.attr('unitref') || 'none',
+    cRef = this.contextRef[sContextId],
+    uRef = this.unitRef[sUnitId]; 
+
+    if (uRef === undefined) {
+
+        if (jResult.attr('name') == undefined) {
+            console.log('no name');
+        }
+        uRef = '';
+        console.log("uRef for " + jResult.attr('name') + " is undefined. name is " );
+    }
+
+    if (cRef === undefined) {
+        cSegment = '';
+        cEntity = '';
+        cPeriod = { 'startDate': '', 'endDate': '', 'instant': '' };
+    }
+
+    else {
+
+        cSegment = cRef.segment;
+        cEntity = cRef.entity
+
+        cPeriod = cRef.period;
+    }
+ 
     if ($.isEmptyObject(cSegment)) {
         cSegment = '';
     }
-        cPeriod = cRef.period;
-        oResult = {            //this.getxObj(
-            'name'          : jResult.data('name', jResult.attr('name')).data('name'),
-            'startDate'     : jResult.data('startDate', cPeriod.startDate).data('startDate'),
-            'endDate'       : jResult.data('endDate', cPeriod.endDate).data('endDate'),
-            'instant'       : jResult.data('instant', cPeriod.instant).data('instant'),
-            'dimensions'    : jResult.data('dimensions', cSegment).data('dimensions')
-        };
+
+    oResult = {            //this.getxObj(
+        'name': jResult.attr('name'),
+        'contextRef': sContextId,
+        'startDate'     : cPeriod.startDate,
+        'endDate'       : cPeriod.endDate,
+        'instant'       : cPeriod.instant,
+        'dimensions': cSegment,
+        'entity': cEntity.identifier,
+        'unitRef': sUnitId,
+        'measure': uRef.measure,
+        'numerator': uRef.numerator,
+        'denominator': uRef.denominator,
+        'ixType'        : jResult[0].nodeName
+    };
 
 
+    if (this.o.inflate)
+    {
+        this.inflate(oResult, jResult);
 
-    //the jResultSet
-        jResult.data('result', oResult);
-
+    }
         this.oResultSet.push(oResult);
 
-        this.contextRef[sContextID].results.push(xObj);
+        this.contextRef[sContextId].results.push(oResult);
+        this.contextRef[sContextId].count++;
+
+        if (this.nameRef[oResult.name] === undefined) {
+            this.nameRef[oResult.name] = {};
+            this.nameRef[oResult.name].results = [];
+            this.nameRef[oResult.name].count = 0;
+        }
+        this.nameRef[oResult.name].results.push(oResult);
+        this.nameRef[oResult.name].count++;
+
+   
+
+        this.unitRef[sUnitId].results.push(oResult);
+        this.unitRef[sUnitId].count++;
+        
+
+    //TODO: A count of segments
+    //TODO: Units
+    //Etc
+
     
 
 
@@ -94,20 +161,175 @@ iQ.prototype.getxObj = function (options) {
 }*/
 
 
-iQ.prototype.element = function (oelementOptions) {
+iQ.prototype.element = function (oElementOptions) {
     //TODO: Need not in oelementOptions
-    if (typeof oelementOptions == "string") {
+    var filterOptions = {};
+    if (typeof oElementOptions == "string") {
+        //this.sLastSearchString = oElementOptions;
         //Implicitly runs
-        this.jResultSet.filter(this.StringQuery.contains);
+        filterOptions = { 'searchString': oElementOptions, 'caseSensitive': false };
+        var jFilterResultSet, jEachResultSet;
+
+        //Filtering is faster anywhere between 1.5 and 3 times as fast  - but then I can't direct results into excluded or included
+        /*var bFilter = false;
+        if (bFilter) {
+            bf = new Date();
+            this.jResultSet = this.jResultSet.filter(function () { return iQ.StringQuery.contains(this, filterOptions) });
+            af = new Date();
+            console.log('after filtering ' + (af - bf));
+        }
+
+        else {*/
+
+            be = new Date();
+            this.result_and(this.contains, filterOptions);
+            ae = new Date();
+            console.log('after eaching ' + (ae - be));
+        //}
+
     }
+    
+    else if (typeof oElementOptions.constructor == (new RegExp()).constructor) {
+        console.log('regex');
+    }
+    else if (typeof oElementOptions.constructor == ({}).constructor) {
+
+        //TODO: Figure out how any:true and all:true affect the below...
+        //Any is equivalent to all of them with or
+        //All is equivalent to all of them with and;
+        //So if any or all is specified, ATTRIBUTES is automatically all of them
+        //Else ATTRIBUTES are only what they specify...
+
+        var attributes = ['name', 'definition', 'terseLabel'];
+        if (oElementOptions.any !== undefined) {
+            oElementOptions.logic = 'or';
+
+        }
+        else if (oElementOptions.all !== undefined) {
+            oElementOptions.logic = 'and';
+
+        }
+        else {
+            //Default internal logic for string is or
+            //This is a String Query
+            oElementOptions.logic = oElementOptions.logic || 'or';
+            tempAttributes = [];
+            for (i in attributes) {
+                //Only if they've specified the attribute!
+                if (oElementOptions[attributes[i]] !== undefined) {
+                    tempAttributes.push(attributes[i]);
+                }
+            }
+            attributes = tempAttributes;
+
+        }
+
+        //These all need to be inflated into data() or added to oResults...
+
+
+
+    }
+
+    return this;
 }
 
 if(!iQ.StringQuery) {iQ.StringQuery = {};}
 
-iQ.StringQuery.contains = function()
+iQ.prototype.result_or = function(eachFunc, options)
 {
+    
+    $.extend(this.o, options);
+    //Searching among those who have been discarded; 
+        //Don't search those already confirmed, they're already confirmed; this is OR!
+        //Search those which have been disqualified (this.jExcludeSet), they could still be confirmed; this is OR!
+    this.jExcludeSet.each($.proxy(eachFunc, this));
+
+    //Add to jResultSet; it just gets bigger! This is OR!
+    this.jResultSet = this.jResultSet.add($(this.jResultSetTemp));
+    //ExcludeSet gets smaller! This is OR!
+    this.jExcludeSet = $(this.jExcludeSetTemp);
+    this.jResultSetTemp = [];
+
+    this.jExcludeSetTemp = [];
 }
 
+iQ.prototype.result_and = function(eachFunc, options)
+{
+    $.extend(this.o, options);
+    this.jResultSet.each($.proxy(eachFunc, this));
+
+    //Remove from jResultSet; it just ets smaller! This is AND!
+    this.jResultSet=$(this.jResultSetTemp);
+    this.jExcludeSet = this.jExcludeSet.add($(this.jExcludeSetTemp));
+    this.jResultSetTemp = [];
+    this.jExcludeSetTemp = [];
+}
+
+
+iQ.prototype.result = function(i, domResult) { 
+    //These could be searching the ResultSet, if it is AND, else the ExcludeSet, if it is OR
+    jResult = $(domResult);
+    if (iQ.StringQuery.contains(jResult, this.o)) {
+        this.jResultSetTemp.push(jResult)
+    }
+    else {
+        this.jExcludeSetTemp.push(jResult);
+    }
+    
+};
+
+iQ.StringQuery.contains = function(result, options)
+{
+    var jResult = $(result);
+    var sName = jResult.data('name');
+    var sSearchString = options.searchString;
+    if (!options.caseSensitive) {
+        sName = sName.toLowerCase();
+        sSearchString = sSearchString.toLowerCase();
+    }
+    
+    
+    
+        return sName.indexOf(sSearchString)>-1;
+    //Inside of these, this refers to the jResult
+}
+
+
+iQ.prototype.getUnitRef = function(index, domUnit){
+    
+
+        jUnit = $(domUnit);
+        oUnit = {};
+        oUnit.measure =  '';
+        oUnit.numerator= '';
+        oUnit.denominator = '';
+        oUnit.results = [];
+        oUnit.count = 0;
+
+
+        if (!this.unitRef['none']) {
+            this.unitRef['none'] = oUnit;
+        }
+
+        sUnitId = jUnit.attr('id');
+
+        jMeasure = jUnit.find('xbrli\\:measure');
+        if (jMeasure.length >0){
+            oUnit.measure = jMeasure.text();
+        }
+        else{
+
+            jDivide = jUnit.find('xbrli\\:divide');
+            //TODO: Support multiplication
+            //jMultiply = jUnit.find('xbrli\\:multiply');
+
+            oUnit.numerator = jDivide.find('xbrli\\:numerator>xbrli\\:measure').text();
+            oUnit.denominator = jDivide.find('xbrli\\:denominator>xbrli\\:measure').text();
+        }
+
+        
+        this.unitRef[sUnitId] = oUnit;
+    }
 
 iQ.prototype.getContextRef = function(index, domContext){
 {
@@ -119,6 +341,7 @@ iQ.prototype.getContextRef = function(index, domContext){
         oContext.period = {};
         oContext.segment = {};
         oContext.results = []; //In inflate, this happens
+        oContext.count = 0;
         //oContext.scenario = {};
 
 
@@ -159,12 +382,7 @@ iQ.prototype.bindEvents = function()
 {
 
 
-
-}
-
-iQ.prototype.initThis = function()
-{
-this.processHeader();
+    //TODO: Must load all synonyms here and point them at the proper functions!
 
 }
 
@@ -242,7 +460,27 @@ Note:
 ,'numerator'
 ,'references'
 ,'resources'
-,'tuple'];
+, 'tuple'];
+
+ iQ.nonValue = [
+     'header',
+     'exclude',
+     'references',
+     'resources',
+     'hidden',
+     'footnote'
+ ];
+
+ iQ.prototype.valueEl = (function () {
+     results = [];
+     for (i in iQ.el) {
+             if (iQ.nonValue.indexOf(iQ.el[i]) == -1) {
+                 results.push(iQ.el[i]);
+             }
+             
+        }
+     return results;
+ })();
 
 /*
 Why:
@@ -279,7 +517,7 @@ iQ.att =[
 
 
   iQ.prototype.iX = function(){
-  	u = iQ.el.slice(0);
+  	u = iQ.prototype.valueEl.slice(0);
   	q=[];
   	for (i in u)
 		{
@@ -331,11 +569,13 @@ $('<table>')
   	
 
 
-		this.contextRef = {};
 
   	$('ix\\:header').find('xbrli\\:context').each(
   		$.proxy(
   		this.getContextRef, this));
+
+  	$('ix\\:header').find('xbrli\\:unit').each(
+$.proxy(this.getUnitRef, this));
 
 
 
@@ -343,10 +583,10 @@ $('<table>')
 
 };
 
-$(document).ready(function(){
+  $(document).ready(function(){
 
 
 
 
-	q = new iQ();
-})
+      q = new iQ();
+  });
