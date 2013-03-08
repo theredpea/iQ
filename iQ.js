@@ -165,6 +165,11 @@ iQ.prototype.element = function (oElementOptions) {
     //TODO: Need not in oelementOptions
     var filterOptions = {};
     if (typeof oElementOptions == "string") {
+
+        if (oElementOptions.indexOf(',') > -1) {
+            var csString = oElementOptions.split(',');
+
+        }
         //this.sLastSearchString = oElementOptions;
         //Implicitly runs
         filterOptions = { 'searchString': oElementOptions, 'caseSensitive': false };
