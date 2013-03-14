@@ -492,6 +492,8 @@ iQ.synoyms={
 ['tpoint', 'pointInTime', 'instant', 'at'],
 ['def', 'definition', 'doc', 'documentation'],
 ['dim', 'member', 'subcategory'],
+['plus', 'addTo'],
+
 };
 
 iQ.synonymsDict = (function(){
@@ -517,3 +519,57 @@ iQ.synonymsDict = (function(){
 	return synonymsDict;
 
 })();
+
+
+//MATH
+//
+
+iQ.element('us-gaap:Liabilities').called('liabilities')
+.plus()						//Should plus have params? Maybe this should contain. Use synonyms
+.element('us-gaap:Equity').called('equity')
+.where(iQ.samePointInTime) //The zipper; executs the math and produces new result set, so it's an endcap
+.called('LiabilitiesAndEquity') // Should we namespace it for them, or LC3 it for them, or underscore it for them? -- Called could also be a nice endcap
+.with() 
+.must()
+.equal()
+
+iQ.element('us-gaap:Liabilities')
+.plus(						
+	iQ.element('us-gaap:Equity')
+	)
+.where(iQ.samePointInTime) 
+.called('LiabilitiesAndEquity') 
+.with() 
+.must()
+.equal()
+
+
+//www.xbrl.org/WGN/XBRL-formula-overview/PWD-2011-12-21/XBRL-formula-overview-WGN-PWD-2011-12-21.html#section-value-assertion-example19
+
+iQ.element('concept:NetIncomes') // Filters to two values
+.called('netIncome') // Optional
+
+.must(iQ.beGreaterThan) 	//
+.must().beGreaterThan()		//
+
+
+iQ.must()
+
+iQ
+.add(
+	iQ.element('concept:CurrentAssets'),
+	iQ.element('concept:NonCurrentAssets')
+	)
+.where(
+	iQ.cEqual, 
+	iQ.uEqual
+	) //Comparator functions which take two operands
+.becomes(iQ.named('concept:TotalAssets'), iQ.span // At this point they forget their operands
+
+			)
+	.called('derived:TotalAssets')
+	
+	
+
+iQ.subtract()
+
