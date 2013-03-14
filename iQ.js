@@ -175,13 +175,22 @@ iQ.prototype.getxObj = function (options) {
 iQ.prototype.element = function (oElementOptions) {
 
     //TODO: Need to express "not" in string syntax
-    var filterOptions = {};
+    var filterOptions = {},
+        listOptions = [],
+        //TODO: 
+        isArray = (typeof oElementOptions.constructor == (new Array()).constructor),
+        isString = (typeof oElementOptions == "string"),
+        isObject = (typeof oElementOptions.constructor == ({}).constructor),
+        isRegEx = (typeof oElementOptions.constructor == (new RegExp()).constructor);
 
-    if (typeof oElementOptions == "string") {
+    if (isArray) {
+        listOptions=oElementOptions
+    }
+    
+    else if (isString) {
 
         //Rename for explicitness
-        var listOptions,
-        stringOptions = oElementOptions,
+        var stringOptions = oElementOptions,
         //Equivalencies. Reduce to one of two delimiters: 
         //',' means 'or'
         //'>' means 'and'
@@ -224,7 +233,10 @@ iQ.prototype.element = function (oElementOptions) {
             //There are no delimiters; this will produce a single-length string. Skip it?
             listOptions =  oElementOptions.split(andDelimiter+orDelimiter);
         }
+    }
 
+    if (listOptions!==[]) 
+    {
         var tempListOptions = [];
 
         listOptions.forEach(function(value, index, array){
@@ -256,14 +268,15 @@ iQ.prototype.element = function (oElementOptions) {
 
             continue;
         }
+    }
         filterOptions = { 'searchString': oElementOptions, 'caseSensitive': false };
         var jFilterResultSet, jEachResultSet;
 
-        //Filtering the jResultSet using $().filter() is 1.5 and 3x faster than the approach below
+        //Filtering the jResultSet using $().filter() (or the JS 1.6 native Array filter method) is between 1.5 and 3x faster than the approach below
         //However, with a filtering approach, iQ cannot direct results into excluded or included
-        //Caching excluded speeds up or searches
-        //Consider useing filter() if a user commits to using only and
-          
+        //Caching excluded speeds up 'or' searches
+        //Consider using filter() if a user does not care about 'and'
+
         /*var bFilter = false;
         if (bFilter) {
             bf = new Date();
@@ -281,8 +294,8 @@ iQ.prototype.element = function (oElementOptions) {
         //}
 
     }
-    
-    else if (typeof oElementOptions.constructor == (new RegExp()).constructor) {
+
+    else if (isRegEx) {
         console.log('regex');
     }
     else if (typeof oElementOptions.constructor == ({}).constructor) {
