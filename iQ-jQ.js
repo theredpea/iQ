@@ -85,7 +85,7 @@ $('#iXBRL').iQ()
 
 
 
-	//STRING SYNTAX
+	//ELEMENT STRING SYNTAX
 	//String syntax, where the user gives string 's' is equivalent to object syntax {name: {contains: {s}}}
 	//Contains it the most forgiving operation
 	//Because it can be difficult to remember some long/technical element ID's completely.
@@ -96,6 +96,26 @@ $('#iXBRL').iQ()
 
 	iQ().element('Cash')
 
+
+	//	If the string is comma-separated
+	//The comma functions like an .or()
+	//To support quick use-cases like this:
+	iQ.element('cash, accounts receivable, inventory, prepaid expenses and other current assets').sum().where(iQ.valuesForAllElements)
+
+	//Because of the "or" treatment
+	//These are equivalent:
+	//EQUIVALENT
+	iQ.element('cash, accounts receivable, inventory, prepaid expenses and other current assets')
+
+	iQ.element('cash').or().element('accounts receivable').or().element('inventory') etc...
+
+	iQ({logic:'or'}).element('cash').element('accounts receivable').element('inventory');
+	
+	//This may be slightly counterintuitive, because in plain English, you might say:
+	"The sum of cash AND accounts receivable AND inventory AND prepaid expenses AND other current assets";
+	//But this "and" is not the same as a logical "and" in iQ resultSets.
+	//It means, the results expected is growing with each new criteria;
+	//That is a logical "or" with iQ resultSets.
 
 
 //STRING QUERIES
@@ -484,7 +504,7 @@ iQ.spanOfTime({'gt': '3M'}) 				//This is not 	using ISO 8601 format;
 //The first one in each list is the ultimate key for functions of properties within iQ
 //Arrange this properly
 iQ.synoyms={
-['element', 'concept', 'account'],
+['element', 'concept', 'account', 'lineItem', 'tag'],
 ['eq', 'equalTo'],
 ['lt', 'lessThan'],
 ['gt', 'greaterThan'],
@@ -572,4 +592,6 @@ iQ
 	
 
 iQ.subtract()
+
+
 
