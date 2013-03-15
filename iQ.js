@@ -11,7 +11,7 @@ console.log('Created global iQ object')
 	    this.getElements();
 	this.bindEvents();
 	//this.initiXbrl();
-	this.addResourceTable();
+	//this.addResourceTable();
     //this.alliX();
 	}
 }
