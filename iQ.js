@@ -272,36 +272,37 @@ iQ.prototype.element = function (oElementOptions) {
             continue;
         }
     }
-        filterOptions = { 'searchString': oElementOptions, 'caseSensitive': false };
-        var jFilterResultSet, jEachResultSet;
+    
+    filterOptions = { 'searchString': oElementOptions, 'caseSensitive': false };
+    var jFilterResultSet, jEachResultSet;
 
-        //Filtering the jResultSet using $().filter() (or the JS 1.6 native Array filter method) is between 1.5 and 3x faster than the approach below
-        //However, with a filtering approach, iQ cannot direct results into excluded or included
-        //Caching excluded speeds up 'or' searches
-        //Consider using filter() if a user does not care about 'and'
+    //Filtering the jResultSet using $().filter() (or the JS 1.6 native Array filter method) is between 1.5 and 3x faster than the approach below
+    //However, with a filtering approach, iQ cannot direct results into excluded or included
+    //Caching excluded speeds up 'or' searches
+    //Consider using filter() if a user does not care about 'and'
 
-        /*var bFilter = false;
-        if (bFilter) {
-            bf = new Date();
-            this.jResultSet = this.jResultSet.filter(function () { return iQ.StringQuery.contains(this, filterOptions) });
-            af = new Date();
-            console.log('after filtering ' + (af - bf));
-        }
-
-        else {*/
-
-            be = new Date();
-            this.result_and(this.contains, filterOptions);
-            ae = new Date();
-            console.log('after eaching ' + (ae - be));
-        //}
-
+    /*var bFilter = false;
+    if (bFilter) {
+        bf = new Date();
+        this.jResultSet = this.jResultSet.filter(function () { return iQ.StringQuery.contains(this, filterOptions) });
+        af = new Date();
+        console.log('after filtering ' + (af - bf));
     }
 
-    else if (isRegEx) {
+    else {*/
+
+        be = new Date();
+        this.result_and(this.contains, filterOptions);
+        ae = new Date();
+        console.log('after eaching ' + (ae - be));
+    //}
+
+    
+
+    if (isRegEx) {
         console.log('regex');
     }
-    else if (typeof oElementOptions.constructor == ({}).constructor) {
+    if (typeof oElementOptions.constructor == ({}).constructor) {
 
         //TODO: Figure out how any:true and all:true affect the below...
         //Any is equivalent to all of them with or

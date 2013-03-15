@@ -37,3 +37,23 @@ if (!Array.prototype.filter)
     return res;
   };
 }
+
+
+
+var Shim = {};
+
+Shim.fileApiSupported = function()
+{
+
+    return (window.File && window.FileReader && window.FileList && window.Blob);
+}
+
+
+//https://developer.mozilla.org/en-US/docs/JavaScript/Reference/Global_Objects/Array/forEach
+if (Shim.fileApiSupported() && !FileList.prototype.forEach ) {
+  FileList.prototype.forEach = function(fn, scope) {
+    for(var f, i = 0; f=this[i]; i++) {
+      fn.call(scope, this[i], i, this);
+    }
+  }
+}
