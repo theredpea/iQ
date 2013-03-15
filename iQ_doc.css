@@ -87,3 +87,29 @@ dd:nth-of-type(n+2)
    cursor:pointer;
 }
 
+table
+{
+   table-layout:fixed;
+   width:100%;
+}
+
+body, html
+{width:100%;
+   padding:0;
+}
+
+td,th
+{
+   width:12.5%;
+overflow:hidden;
+white-space:nowrap;
+}
+
+td:nth-child(n+8),
+th:nth-child(n+8){
+display:none;
+}
+
+tr:nth-child(2n)
+{background-color:#DDD;
+   }
