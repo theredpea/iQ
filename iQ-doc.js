@@ -12,6 +12,7 @@ iQ_tax = function()
 
 iQ_tax.prototype.setProperties = function(){
     this.jOutput = $('output');
+    this.reader = new FileReader();
     }
 
 iQ_tax.prototype.bindEvents = function()
@@ -28,17 +29,25 @@ iQ_tax.prototype.bindEvents = function()
 
 }
 
+iQ_tax.prototype.fileOnload = function(e)
+{
+
+    e.target.result;
+
+}
+
 iQ_tax.prototype.selectedFiles = function(e)
 {
+    //  http://www.html5rocks.com/en/tutorials/file/dndfiles/
 
     var jInput = $(e.target),
         files = e.target.files; // File object
 
-        files.forEach(this.eachFile, this);
+        files.forEach(this.listEachFile, this);
 
 }
 
-iQ_tax.prototype.eachFile = function(file, index, files)
+iQ_tax.prototype.listEachFile = function(file, index, files)
 {
 
     this.jOutput.append($('<dl>').append(
@@ -74,17 +83,44 @@ iQ_tax.prototype.dropFiles = function(e)
     e.preventDefault();//Default behavior is opening the file
     var files = e.originalEvent.dataTransfer.files;
 
-    files.forEach(this.eachFile, this);
+    files.forEach(this.readFile, this);
 
 
 }
 
 //http://dev.w3.org/2006/webapi/FileAPI/#filereader-interface
-iQ_tax.prototype_readFile = function()
+//https://developer.mozilla.org/en-US/docs/DOM/FileReader
+iQ_tax.prototype.readFile = function(file, index, files)
 {
 
+    //New reader every time?
+    this.reader = new FileReader();
+    this.reader.onload = (function(file)
+    {
+        return function(e)
+        {
 
+            var result=e.target.result,
+                name = file.name,
+                size = file.size;
+
+            $('#result').html(result);
+
+
+
+
+
+
+        }
+
+
+
+    })(file);
+
+    this.reader.readAsText(file);
 }
+
+
 iQ_tax.prototype.fileApiSupported = function()
 {
 
