@@ -85,7 +85,7 @@ $('#iXBRL').iQ()
 
 
 
-	//STRING SYNTAX
+	//ELEMENT STRING SYNTAX
 	//String syntax, where the user gives string 's' is equivalent to object syntax {name: {contains: {s}}}
 	//Contains it the most forgiving operation
 	//Because it can be difficult to remember some long/technical element ID's completely.
@@ -96,6 +96,26 @@ $('#iXBRL').iQ()
 
 	iQ().element('Cash')
 
+
+	//	If the string is comma-separated
+	//The comma functions like an .or()
+	//To support quick use-cases like this:
+	iQ.element('cash, accounts receivable, inventory, prepaid expenses and other current assets').sum().where(iQ.valuesForAllElements)
+
+	//Because of the "or" treatment
+	//These are equivalent:
+	//EQUIVALENT
+	iQ.element('cash, accounts receivable, inventory, prepaid expenses and other current assets')
+
+	iQ.element('cash').or().element('accounts receivable').or().element('inventory') etc...
+
+	iQ({logic:'or'}).element('cash').element('accounts receivable').element('inventory');
+	
+	//This may be slightly counterintuitive, because in plain English, you might say:
+	"The sum of cash AND accounts receivable AND inventory AND prepaid expenses AND other current assets";
+	//But this "and" is not the same as a logical "and" in iQ resultSets.
+	//It means, the results expected is growing with each new criteria;
+	//That is a logical "or" with iQ resultSets.
 
 
 //STRING QUERIES
@@ -484,7 +504,7 @@ iQ.spanOfTime({'gt': '3M'}) 				//This is not 	using ISO 8601 format;
 //The first one in each list is the ultimate key for functions of properties within iQ
 //Arrange this properly
 iQ.synoyms={
-['element', 'concept', 'account'],
+['element', 'concept', 'account', 'lineItem', 'tag'],
 ['eq', 'equalTo'],
 ['lt', 'lessThan'],
 ['gt', 'greaterThan'],
@@ -492,6 +512,8 @@ iQ.synoyms={
 ['tpoint', 'pointInTime', 'instant', 'at'],
 ['def', 'definition', 'doc', 'documentation'],
 ['dim', 'member', 'subcategory'],
+['plus', 'addTo'],
+
 };
 
 iQ.synonymsDict = (function(){
@@ -517,3 +539,59 @@ iQ.synonymsDict = (function(){
 	return synonymsDict;
 
 })();
+
+
+//MATH
+//
+
+iQ.element('us-gaap:Liabilities').called('liabilities')
+.plus()						//Should plus have params? Maybe this should contain. Use synonyms
+.element('us-gaap:Equity').called('equity')
+.where(iQ.samePointInTime) //The zipper; executs the math and produces new result set, so it's an endcap
+.called('LiabilitiesAndEquity') // Should we namespace it for them, or LC3 it for them, or underscore it for them? -- Called could also be a nice endcap
+.with() 
+.must()
+.equal()
+
+iQ.element('us-gaap:Liabilities')
+.plus(						
+	iQ.element('us-gaap:Equity')
+	)
+.where(iQ.samePointInTime) 
+.called('LiabilitiesAndEquity') 
+.with() 
+.must()
+.equal()
+
+
+//www.xbrl.org/WGN/XBRL-formula-overview/PWD-2011-12-21/XBRL-formula-overview-WGN-PWD-2011-12-21.html#section-value-assertion-example19
+
+iQ.element('concept:NetIncomes') // Filters to two values
+.called('netIncome') // Optional
+
+.must(iQ.beGreaterThan) 	//
+.must().beGreaterThan()		//
+
+
+iQ.must()
+
+iQ
+.add(
+	iQ.element('concept:CurrentAssets'),
+	iQ.element('concept:NonCurrentAssets')
+	)
+.where(
+	iQ.cEqual, 
+	iQ.uEqual
+	) //Comparator functions which take two operands
+.becomes(iQ.named('concept:TotalAssets'), iQ.span // At this point they forget their operands
+
+			)
+	.called('derived:TotalAssets')
+	
+	
+
+iQ.subtract()
+
+
+

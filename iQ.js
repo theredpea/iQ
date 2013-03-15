@@ -1,20 +1,16 @@
 
-if (!iQ)
-{
-var iQ = {};
-console.log('Created global iQ object')
+iQ = function(oOptions){
 
-	iQ = function(oOptions){
-
-	    this.setOptions(oOptions);
-	    this.processHeader();
-	    this.getElements();
+    this.setOptions(oOptions);
+    this.processHeader();
+    this.getElements();
 	this.bindEvents();
 	//this.initiXbrl();
+
 	//this.addResourceTable();
-    //this.alliX();
+    this.alliX();
 	}
-}
+
 
 
 
@@ -50,7 +46,7 @@ iQ.prototype.getElements = function ()
     jPreQualElements = $(sPreQualElements);
 
     this.jAllSet = jPreQualElements.slice(0);
-    this.jResultSet = jPreQualElements.slice(0)
+    this.jResultSet = jPreQualElements.slice(0);
     this.jExcludeSet = $('');
     this.jResultSetTemp = [];
     this.jExcludeSetTemp = [];
@@ -130,23 +126,41 @@ iQ.prototype.getResults = function (index, result)
     }
         this.oResultSet.push(oResult);
 
-        this.contextRef[sContextId].results.push(oResult);
-        this.contextRef[sContextId].count++;
+        if(!$.isEmptyObject(this.contextRef))
+        {
 
-        if (this.nameRef[oResult.name] === undefined) {
-            this.nameRef[oResult.name] = {};
-            this.nameRef[oResult.name].results = [];
-            this.nameRef[oResult.name].count = 0;
+            if(this.contextRef[sContextId].results===undefined)
+            {
+
+             this.contextRef[sContextId].results=[];
+            }
+
+            this.contextRef[sContextId].results.push(oResult);
+            this.contextRef[sContextId].count++;
+
         }
-        this.nameRef[oResult.name].results.push(oResult);
-        this.nameRef[oResult.name].count++;
 
-   
+        if(!$.isEmptyObject(this.nameRef))
+        {
 
-        this.unitRef[sUnitId].results.push(oResult);
-        this.unitRef[sUnitId].count++;
+            if (this.nameRef[oResult.name] === undefined) {
+                this.nameRef[oResult.name] = {};
+                this.nameRef[oResult.name].results = [];
+                this.nameRef[oResult.name].count = 0;
+            }
+            this.nameRef[oResult.name].results.push(oResult);
+            this.nameRef[oResult.name].count++;
+
+        }
+
+        if(!$.isEmptyObject(this.unitRef))
+        {
+
+
+            this.unitRef[sUnitId].results.push(oResult);
+            this.unitRef[sUnitId].count++;
         
-
+        }
     //TODO: A count of segments
     //TODO: Units
     //Etc
@@ -162,20 +176,110 @@ iQ.prototype.getxObj = function (options) {
 
 
 iQ.prototype.element = function (oElementOptions) {
-    //TODO: Need not in oelementOptions
-    var filterOptions = {};
-    if (typeof oElementOptions == "string") {
 
-        if (oElementOptions.indexOf(',') > -1) {
-            var csString = oElementOptions.split(',');
+    //TODO: Need to express "not" in string syntax
+    var filterOptions = {},
+        listOptions = [],
+        //TODO: 
+        isArray = (typeof oElementOptions.constructor == (new Array()).constructor),
+        isString = (typeof oElementOptions == "string"),
+        isObject = (typeof oElementOptions.constructor == ({}).constructor),
+        isRegEx = (typeof oElementOptions.constructor == (new RegExp()).constructor);
+
+    if (isArray) {
+        listOptions=oElementOptions
+    }
+    
+    else if (isString) {
+
+        //Rename for explicitness
+        var stringOptions = oElementOptions,
+        //Equivalencies. Reduce to one of two delimiters: 
+        //',' means 'or'
+        //'>' means 'and'
+        orDelimiter = ',',
+        andDelimiter = '>';
+
+        oElementOptions = stringOptions
+                                    .replace('||',  orDelimiter)
+                                    .replace('|',   orDelimiter)
+
+                                    .replace('&',   andDelimiter)
+                                    .replace('&&',  andDelimiter);
+
+        var orDelimited = stringOptions.indexOf(orDelimiter)>-1;
+        var andDelimited = stringOptions.indexOf(andDelimiter)>-1;
+
+        if (orDelimited && andDelimited)
+        {
+            throw 'iQ cannot handle both commas and greater-than signs for now.';
+        }
+
+        //For example, iQ.element('assets, liabilities'), they want both.
+        if (orDelimited) 
+        {
+            listOptions = stringOptions.split(orDelimiter);
+            this.logic = 'or';
 
         }
-        //this.sLastSearchString = oElementOptions;
-        //Implicitly runs
+
+        //For example, iQ.element('assets> current'), they want, of assets, the current variety.
+        else if (andDelimited) 
+        {
+            listOptions = oElementOptions.split(andDelimiter);
+
+        }
+
+        else
+        {
+
+            //There are no delimiters; this will produce a single-length string. Skip it?
+            listOptions =  oElementOptions.split(andDelimiter+orDelimiter);
+        }
+    }
+
+    if (listOptions!==[]) 
+    {
+        var tempListOptions = [];
+
+        listOptions.forEach(function(value, index, array){
+            value = value.trim();
+            if (value!='') tempListOptions.push(value); // TODO: Better "empty string" checking?
+        });
+
+        listOptions = tempListOptions;
+
+        if (listOptions.length==0)
+        {
+            throw 'After striping whitespace, iQ cannot find any strings. Empty filter?';
+        }
+        if (listOptions.length>1)
+        {
+            //Providing a list of strings is the equivalent of successive element calls with single strings
+            //iQ.element('asset').element('current');
+
+            //TODO: Use forEach https://developer.mozilla.org/en-US/docs/JavaScript/Reference/Global_Objects/Array/forEach
+            listOptions.forEach(function(value, index, array){
+                this.element(value)});
+        }
+        if (listOptions.length==1)
+        {
+
+            //A single string is provided, which is equivalent to element call with object syntax
+            //iQ.element({any:'asset'});
+            //But I work on string syntax before object syntax
+
+            continue;
+        }
+    }
         filterOptions = { 'searchString': oElementOptions, 'caseSensitive': false };
         var jFilterResultSet, jEachResultSet;
 
-        //Filtering is faster anywhere between 1.5 and 3 times as fast  - but then I can't direct results into excluded or included
+        //Filtering the jResultSet using $().filter() (or the JS 1.6 native Array filter method) is between 1.5 and 3x faster than the approach below
+        //However, with a filtering approach, iQ cannot direct results into excluded or included
+        //Caching excluded speeds up 'or' searches
+        //Consider using filter() if a user does not care about 'and'
+
         /*var bFilter = false;
         if (bFilter) {
             bf = new Date();
@@ -193,8 +297,8 @@ iQ.prototype.element = function (oElementOptions) {
         //}
 
     }
-    
-    else if (typeof oElementOptions.constructor == (new RegExp()).constructor) {
+
+    else if (isRegEx) {
         console.log('regex');
     }
     else if (typeof oElementOptions.constructor == ({}).constructor) {
