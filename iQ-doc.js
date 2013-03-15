@@ -190,6 +190,7 @@ iQ_tax.prototype.tableify = function(event)
         jRow.append(jCells)
         jRows.push(jRow);
         i++;
+        if (i>500) break;
     }
 
     jBody.append(jRows);
@@ -234,7 +235,7 @@ iQ_tax.prototype.jsonify = function(event)
         for (attributeIndex in value.attributes)
         {
             attribute = value.attributes[attributeIndex];
-            oAttributes[attribute.name]=attribute.value;
+            if(attribute.name!=undefined && !isNaN(parseInt(attributeIndex))) oAttributes[attribute.name]=attribute.value;
         }
 
         jsonSchema[jElement.attr('name')] = oAttributes;
