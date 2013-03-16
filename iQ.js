@@ -50,6 +50,7 @@ iQ.prototype.getElements = function ()
     this.jExcludeSet = $('');
     this.jResultSetTemp = [];
     this.jExcludeSetTemp = [];
+    this.history={};
 
     
         this.jResultSet.each(
@@ -126,6 +127,7 @@ iQ.prototype.getResults = function (index, result)
     }
         this.oResultSet.push(oResult);
 
+        //------------------CONTEXTREF
         if(!$.isEmptyObject(this.contextRef))
         {
 
@@ -139,7 +141,7 @@ iQ.prototype.getResults = function (index, result)
             this.contextRef[sContextId].count++;
 
         }
-
+        //------------------NAMEREF
         if(!$.isEmptyObject(this.nameRef))
         {
 
@@ -153,6 +155,7 @@ iQ.prototype.getResults = function (index, result)
 
         }
 
+        //------------------UNITREF
         if(!$.isEmptyObject(this.unitRef))
         {
 
@@ -161,9 +164,8 @@ iQ.prototype.getResults = function (index, result)
             this.unitRef[sUnitId].count++;
         
         }
+
     //TODO: A count of segments
-    //TODO: Units
-    //Etc
 
     
 
@@ -174,17 +176,32 @@ iQ.prototype.getResults = function (index, result)
 iQ.prototype.getxObj = function (options) {
 }*/
 
+//Gives defaults?
+
+iQ.prototype._elementObject = function (oElement) {
+    //Keep in mind that the target object (first argument) will be modified, and will also be returned from $.extend()
+    return $.extend({
+        any:true,
+        caseSensitive:false,
+        not:false
+    }, oElement);
+}
+
 
 iQ.prototype.element = function (oElementOptions) {
 
     //TODO: Need to express "not" in string syntax
-    var filterOptions = {},
+    var searchString,
+        iQinstruction={},
+        filterOptions = {},
         listOptions = [],
         //TODO: 
         isArray = (typeof oElementOptions.constructor == (new Array()).constructor),
         isString = (typeof oElementOptions == "string"),
         isObject = (typeof oElementOptions.constructor == ({}).constructor),
         isRegEx = (typeof oElementOptions.constructor == (new RegExp()).constructor);
+    
+    oElementOptions = oElementOptions || '';
 
     if (isArray) {
         listOptions=oElementOptions
@@ -238,7 +255,7 @@ iQ.prototype.element = function (oElementOptions) {
         }
     }
 
-    if (listOptions!==[]) 
+    if (listOptions!==[] && listOptions.length>0) 
     {
         var tempListOptions = [];
 
@@ -247,7 +264,21 @@ iQ.prototype.element = function (oElementOptions) {
             if (value!='') tempListOptions.push(value); // TODO: Better "empty string" checking?
         });
 
+       
+        
         listOptions = tempListOptions;
+
+
+        this.history[new Date()] = {};
+        //Record it all as history, or record each individually?
+         iQinstruction = this.history[new Date()].iQinstruction= listOptions.map(function(value){
+             //So it can have defaults.
+             return iQ._elementObject({
+                 any:true,
+                 contains:value,
+                 logic:or
+             });
+         });
 
         if (listOptions.length==0)
         {
@@ -258,9 +289,11 @@ iQ.prototype.element = function (oElementOptions) {
             //Providing a list of strings is the equivalent of successive element calls with single strings
             //iQ.element('asset').element('current');
 
-            //TODO: Use forEach https://developer.mozilla.org/en-US/docs/JavaScript/Reference/Global_Objects/Array/forEach
+            //So this is a recursive function. Can those be optimized.
             listOptions.forEach(function(value, index, array){
                 this.element(value)});
+            //Need method chaining
+            return this;
         }
         if (listOptions.length==1)
         {
@@ -268,11 +301,11 @@ iQ.prototype.element = function (oElementOptions) {
             //A single string is provided, which is equivalent to element call with object syntax
             //iQ.element({any:'asset'});
             //But I work on string syntax before object syntax
+            searchString = listOptions.pop(); //Or listOptions[0]?
 
-            continue;
         }
     }
-        filterOptions = { 'searchString': oElementOptions, 'caseSensitive': false };
+
         var jFilterResultSet, jEachResultSet;
 
         //Filtering the jResultSet using $().filter() (or the JS 1.6 native Array filter method) is between 1.5 and 3x faster than the approach below
