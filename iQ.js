@@ -178,16 +178,127 @@ iQ.prototype.getxObj = function (options) {
 
 //Gives defaults?
 
-iQ.prototype._elementObject = function (oElement) {
+iQ.prototype._elementFilter = function (oElement) {
+    var filter = {};
+    if (typeof (oElement) == typeof (new String())) {
+        oElement =
+            {
+                any:
+                    {
+                        contains: oElement,
+                        caseSensitive: false
+                    }
+            };
+    }
+
+    if (typeof (oElement) == typeof (new Object())) {
+        var lElementProperties = Object.keys(oElement);
+
+        if (lElementProperties.indexOf('any') > -1) {
+
+            anyStringFilter = lElementProperties.any;
+
+            elementProperties = Object.keys(this._elementFilterDoc())
+            elementProperties.foreach(function (element, index, array) {
+                if (element !== 'any' && element !== 'all') {
+                    filter[element] = anyStringFilter;
+                }
+            }, this);
+
+
+
+        }
+
+        else if (lElementProperties.indexOf('all') > -1) {
+
+            filter =
+                {
+                };
+        }
+
+        else {
+            filter = oElement;
+        }
+        
+    }
+
+    return filter;
+
+};
+
+iQ.prototype._labelFilterDoc = function () {
+
+
+}
+
+iQ.prototype._elementFilterDoc = function () {
     //Keep in mind that the target object (first argument) will be modified, and will also be returned from $.extend()
-    return $.extend({
-        any:true,
-        caseSensitive:false,
-        not:false
-    }, oElement);
+    var o= 
+    {
+        doc:    this._stringFilterDoc(),	//*
+        lab:    this._stringFilterDoc(),    //*
+        ref:    this._stringFilterDoc(),    //*
+        name:   this._stringFilterDoc(),    //*
+        any:    this._stringFilterDoc(),    //If any is used, it overrides everything else	. Any is equivalent to an elementFilter with all of the *singular, with the logic 'or'
+        all:    this._stringFilterDoc(),    //If all is used, it overrides everything else except any. All is equivalent to an elementFilter with all of the *singular, with the logic 'and'
+        logic:  new Boolean(),
+        sortBy: new Array()
+
+        //*If many of these are supplied, there is an implicit or treatment
+
+    };
+    return o;
 }
 
 
+iQ.prototype._stringFilter = function (oString) {
+
+    var filter =
+        {
+            contains: oString,
+            caseSensitive: false
+
+        };
+
+    return filter;
+}
+//TODO: Can I pull off iQ.prototype._doc.stringFilter? 
+iQ.prototype._stringFilterDoc = function (oString) {
+
+    var o=
+    {
+        startsWith:     new String(),
+        endsWith:       new String(),
+        contains:       new String(),
+        matches:        new RegExp(),
+        caseSensitive:  new Boolean(),
+
+    };
+    return o;
+   
+}
+
+iQ.prototype.ascending = function (prev, next) {
+
+}
+iQ.prototype.sort = function () {
+    var o = {
+        ascending: 'ascending',         //this.ascending, TODO: Actually make functions? How do you plan to sort?
+        descending: 'descending'        //this.descending
+        
+    };
+    return o
+}
+
+iQ.prototype._elementSortDoc = function(oSort)
+{
+    var filterKeys = Object.keys(this._elementFilterDoc()),
+    o = {};
+    filterKeys.forEach(function (element, index, array) {
+        o[element] = this.sort().ascending;
+    }, this);
+
+}
 iQ.prototype.element = function (oElementOptions) {
 
     //TODO: Need to express "not" in string syntax
@@ -268,18 +379,9 @@ iQ.prototype.element = function (oElementOptions) {
         
         listOptions = tempListOptions;
 
-
-        this.history[new Date()] = {};
-        //Record it all as history, or record each individually?
-         iQinstruction = this.history[new Date()].iQinstruction= listOptions.map(function(value){
-             //So it can have defaults.
-             return iQ._elementObject({
-                 any:true,
-                 contains:value,
-                 logic:or
-             });
-         });
-
+        var startTime = new Date();
+        this.history[startTime] = {};
+        
         if (listOptions.length==0)
         {
             throw 'After striping whitespace, iQ cannot find any strings. Empty filter?';
@@ -291,7 +393,7 @@ iQ.prototype.element = function (oElementOptions) {
 
             //So this is a recursive function. Can those be optimized.
             listOptions.forEach(function(value, index, array){
-                this.element(value)});
+                this.element(this._elementFilter(valuee))});
             //Need method chaining
             return this;
         }
@@ -305,6 +407,17 @@ iQ.prototype.element = function (oElementOptions) {
 
         }
     }
+        //Record it all as history, or record each individually?
+        //TODO: Decide whether to record each individually?
+
+        iQinstruction = this.history[startTime].iQinstruction = listOptions.map($.proxy(function (value) {
+            //So it can have defaults.
+            return this._elementFilter({
+                any: true,
+                contains: value,
+                logic: 'or'
+            });
+        }, this));
 
         var jFilterResultSet, jEachResultSet;
 
@@ -320,7 +433,6 @@ iQ.prototype.element = function (oElementOptions) {
             af = new Date();
             console.log('after filtering ' + (af - bf));
         }
-=======
     
     filterOptions = { 'searchString': oElementOptions, 'caseSensitive': false };
     var jFilterResultSet, jEachResultSet;
