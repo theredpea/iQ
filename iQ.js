@@ -51,6 +51,8 @@ iQ.prototype.getElements = function ()
     this.jResultSetTemp = [];
     this.jExcludeSetTemp = [];
     this.history={};
+//Represents inter logic, not intra logic
+	this.logic = 'and';
 
     
         this.jResultSet.each(
@@ -178,16 +180,28 @@ iQ.prototype.getxObj = function (options) {
 
 //Gives defaults?
 
+iQ.prototype._sortByFilter = function(oFilter)
+{
+    sortByList = [];
+    Object.keys(oFilter).forEach(function(element, index, array)
+    {
+
+        sortByList.push({
+            element: 'ascending'});
+
+    }, this);
+    return sortByList;
+
+}
+
+
 iQ.prototype._elementFilter = function (oElement) {
     var filter = {};
     if (typeof (oElement) == typeof (new String())) {
         oElement =
             {
-                any:
-                    {
-                        contains: oElement,
-                        caseSensitive: false
-                    }
+                any: this._stringFilter(oElement),
+		sortBy : 'name'
             };
     }
 
@@ -197,13 +211,34 @@ iQ.prototype._elementFilter = function (oElement) {
         if (lElementProperties.indexOf('any') > -1) {
 
             anyStringFilter = lElementProperties.any;
+		//For example, 
+/*
+
+                    {
+                        contains: oElement,
+                        caseSensitive: false,
+                        sortBy:'name'   //TODO: Figure out how a sortObject works, and what is its default? Its parent key ascending?
+                    }
+*/
 
             elementProperties = Object.keys(this._elementFilterDoc())
             elementProperties.foreach(function (element, index, array) {
-                if (element !== 'any' && element !== 'all') {
-                    filter[element] = anyStringFilter;
+                if (element !== 'any' && element !== 'all') { //So like 'doc', 'ref', 'label', 'name'
+                    //Q: Do I need to make a copy?
+                    //I don't ever change this thing,
+                    //http://stackoverflow.com/questions/728360/copying-an-object-in-javascript
+                    filter[element] = anyStringFilter; //
+                    
                 }
             }, this);
+
+            //Any does 'or' logic, even if the user specified 'and'
+            filter.logic = 'or';
+
+                //Extend /overwrite the defaults.
+            //filter.sortBy = $.extend(this._sortByFilter(filter), filter.sortBy);
+                //Or: don't use defaults unless they provided nothing
+            //filter.sortBy = filter.sortBy | this._sortByFilter(filter);
 
 
 
@@ -211,9 +246,20 @@ iQ.prototype._elementFilter = function (oElement) {
 
         else if (lElementProperties.indexOf('all') > -1) {
 
-            filter =
-                {
-                };
+
+            allStringFilter = lElementProperties.all;
+
+            elementProperties = Object.keys(this._elementFilterDoc())
+            elementProperties.foreach(function (element, index, array) {
+                if (element !== 'any' && element !== 'all') {
+                    filter[element] = allStringFilter; //
+
+                }
+            }, this);
+
+            //Any does 'and' logic, even if the user specified 'or'
+            filter.logic = 'and';
+            filter.caseSensitive = oElement.caseSensitive || 'false';
         }
 
         else {
@@ -241,7 +287,7 @@ iQ.prototype._elementFilterDoc = function () {
         name:   this._stringFilterDoc(),    //*
         any:    this._stringFilterDoc(),    //If any is used, it overrides everything else	. Any is equivalent to an elementFilter with all of the *singular, with the logic 'or'
         all:    this._stringFilterDoc(),    //If all is used, it overrides everything else except any. All is equivalent to an elementFilter with all of the *singular, with the logic 'and'
-        logic:  new Boolean(),
+        logic:  new String(), //	new Boolean(),
         sortBy: new Array()
 
         //*If many of these are supplied, there is an implicit or treatment
@@ -253,12 +299,24 @@ iQ.prototype._elementFilterDoc = function () {
 
 iQ.prototype._stringFilter = function (oString) {
 
-    var filter =
+var filter = {};
+if(typeof oString == 'string')
+{
+    filter =
         {
             contains: oString,
             caseSensitive: false
 
         };
+}
+else if (typeof oString == 'object')
+{
+	filter = $.extend({
+			caseSensitive: false
+			},
+			oString);
+
+}
 
     return filter;
 }
@@ -267,11 +325,13 @@ iQ.prototype._stringFilterDoc = function (oString) {
 
     var o=
     {
+	equals:		new String(),
         startsWith:     new String(),
         endsWith:       new String(),
         contains:       new String(),
         matches:        new RegExp(),
-        caseSensitive:  new Boolean(),
+        caseSensitive:  new Boolean()
+	//logic:	new String() 'and'|'or'		//No interstitial logic on a string query, yet. Use case not compelling. startsWith and endsWith? Shouldn't it just be equals? If not, what are the chances it would've changed?
 
     };
     return o;
@@ -346,6 +406,7 @@ iQ.prototype.element = function (oElementOptions) {
         //For example, iQ.element('assets, liabilities'), they want both.
         if (orDelimited) 
         {
+//TODO: A code path which does not split them and run through the method once for each, but which sends a list down the line and evaluates each element against all string operands in a single .forEach (rather than repeating .forEach)
             listOptions = stringOptions.split(orDelimiter);
             this.logic = 'or';
 
@@ -355,6 +416,7 @@ iQ.prototype.element = function (oElementOptions) {
         else if (andDelimited) 
         {
             listOptions = oElementOptions.split(andDelimiter);
+		this.logic = 'and';
 
         }
 
@@ -365,8 +427,12 @@ iQ.prototype.element = function (oElementOptions) {
             listOptions =  oElementOptions.split(andDelimiter+orDelimiter);
         }
     }
+	if(listOptions==[] || listOptions.length<0)
+	{
 
-    if (listOptions!==[] && listOptions.length>0) 
+	throw 'List options is empty';
+	}
+    else 
     {
         var tempListOptions = [];
 
@@ -393,7 +459,7 @@ iQ.prototype.element = function (oElementOptions) {
 
             //So this is a recursive function. Can those be optimized.
             listOptions.forEach(function(value, index, array){
-                this.element(this._elementFilter(valuee))});
+                this.element(this._elementFilter(value))}, this);
             //Need method chaining
             return this;
         }
@@ -405,57 +471,43 @@ iQ.prototype.element = function (oElementOptions) {
             //But I work on string syntax before object syntax
             searchString = listOptions.pop(); //Or listOptions[0]?
 
+		filters = this._elementFilter(searchString);
+
         }
     }
-        //Record it all as history, or record each individually?
-        //TODO: Decide whether to record each individually?
 
-        iQinstruction = this.history[startTime].iQinstruction = listOptions.map($.proxy(function (value) {
-            //So it can have defaults.
-            return this._elementFilter({
-                any: true,
-                contains: value,
-                logic: 'or'
-            });
-        }, this));
+	if(isObject)
+	{
+		filters = oElement;
+	}
+        
 
         var jFilterResultSet, jEachResultSet;
 
-        //Filtering the jResultSet using $().filter() (or the JS 1.6 native Array filter method) is between 1.5 and 3x faster than the approach below
-        //However, with a filtering approach, iQ cannot direct results into excluded or included
-        //Caching excluded speeds up 'or' searches
-        //Consider using filter() if a user does not care about 'and'
 
-        /*var bFilter = false;
-        if (bFilter) {
-            bf = new Date();
-            this.jResultSet = this.jResultSet.filter(function () { return iQ.StringQuery.contains(this, filterOptions) });
-            af = new Date();
-            console.log('after filtering ' + (af - bf));
-        }
-    
-    filterOptions = { 'searchString': oElementOptions, 'caseSensitive': false };
-    var jFilterResultSet, jEachResultSet;
 
-    //Filtering the jResultSet using $().filter() (or the JS 1.6 native Array filter method) is between 1.5 and 3x faster than the approach below
-    //However, with a filtering approach, iQ cannot direct results into excluded or included
-    //Caching excluded speeds up 'or' searches
-    //Consider using filter() if a user does not care about 'and'
+        iQinstruction = this.history[startTime].iQinstruction = listOptions.map($.proxy(function (value) {
+            
+        }, this));
+	
 
-    /*var bFilter = false;
-    if (bFilter) {
-        bf = new Date();
-        this.jResultSet = this.jResultSet.filter(function () { return iQ.StringQuery.contains(this, filterOptions) });
-        af = new Date();
-        console.log('after filtering ' + (af - bf));
-    }
+	for(elementProperty in filters)
+	{
+		elementPropertyValueFunction = this.element.['get_'+elementProperty];
+		
+		stringFilter = filters[elementProperty];
 
-    else {*/
+		for(stringProperty in stringFilter)
+		{
+			stringPropertyValueFunction = this.string['filter_'+stringProperty];
+        		be = new Date();
+	
 
-        be = new Date();
-        this.result_and(this.contains, filterOptions);
-        ae = new Date();
-        console.log('after eaching ' + (ae - be));
+        		this['result_'+this.logic](elementPropertyValueFunction, this.propertyFunction),
+        		ae = new Date();
+        		console.log('after eaching ' + (ae - be));
+		}
+	}
     //}
 
     
@@ -504,6 +556,44 @@ iQ.prototype.element = function (oElementOptions) {
     return this;
 }
 
+
+iQ.string = {};
+
+iQ.string.caseAdjust(s, operand, stringFilter)
+{
+	if (stringFilter.caseSensitive==true 
+		|| stringFilter.caseSensitive.toLowerCase()=='true')
+	{
+		s=s.toLowerCase();
+		operand=operand.toLowerCase();
+	}
+
+}
+
+iQ.string.filter_contains = function(s, operand, stringFilter
+{
+	return s.indexOf(operand)>-1;
+}
+
+iQ.string.filter_startsWith = function(s, operand), options
+{
+	return s.indexOf(operand)==0;
+}
+
+iQ.element={};
+
+iQ.element.get_doc =function(xbrlValue)
+{
+
+return 'documentation has assets';
+
+}
+
+iQ.element.get_name = function(xbrlValue)
+{
+
+}
+ 
 if(!iQ.StringQuery) {iQ.StringQuery = {};}
 
 iQ.prototype.result_or = function(eachFunc, options)
@@ -524,7 +614,17 @@ iQ.prototype.result_or = function(eachFunc, options)
     this.jExcludeSetTemp = [];
 }
 
-iQ.prototype.result_and = function(eachFunc, options)
+
+iQ.element = function () {
+}
+
+iQ.string = function()
+{
+
+
+    }
+
+iQ.prototype.result_and = function(eachFunc, eachOperand)
 {
     $.extend(this.o, options);
     this.jResultSet.each($.proxy(eachFunc, this));
