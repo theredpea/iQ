@@ -1,0 +1,118 @@
+*
+{
+   text-indent:0px;
+}
+
+th{text-align:left;}
+.popover
+{
+
+   max-width:600px;
+   min-width:500px;
+}
+
+.sticker
+{
+   color:white;
+   text-indent:0px;
+}
+
+.sticker .title,
+.sticker .expander
+{
+
+   display:inline-block;
+   padding:5px 10px;
+   height:30px;
+   box-sizing:border-box;
+   -webkit-box-sizing:border-box;
+   vertical-align:top;
+}
+
+.sticker .title
+{
+
+   font-weight:normal;
+   background-color:#18b1c9;
+   border-radius:5px;
+   -webkit-border-radius:5px;
+   -moz-border-radius:5px;
+   border-top-left-radius:0px;
+   border-bottom-left-radius:0px;
+
+   line-height:1.5em;
+
+   white-space:nowrap;
+   max-width:330px;
+   overflow:hidden;
+   text-indent:0px;
+}
+
+.sticker .expander
+{
+   -webkit-border-radius:5px;
+   -moz-border-radius:5px;
+   border-top-right-radius:0px;
+   border-bottom-right-radius:0px;
+   font-weight:bolder;
+   background-color:#166f99;
+   width:30px;
+   font-size:1.5em;
+   line-height:0.75em;
+   text-indent:0px;
+}
+
+
+.sticker .expander:active
+{
+
+   background-color:#222;
+}
+
+.popover-title
+{
+   max-width:auto; 
+   font-size:1.5em;
+   font-weight:bold;
+   font-style:italic;
+}
+.popover .close {
+   position:absolute;
+   right:  5px;
+   top:    5px;
+   display:block;
+   padding:5px;
+   color:black;
+   font-weight:lighter;
+   text-align:center;
+   cursor:pointer;
+   background-color:#CCC;
+/*
+border-right:2px solid black;
+border-bottom:2px solid black;
+    */
+border-radius:          12px;
+-webkit-border-radius:  12px;
+-moz-border-radius:     12px;
+height: 24px;
+width:  24px;
+font-size:20px;
+line-height:10px;
+}
+
+    .popover .close:hover {
+        background-color: grey;
+        color: white;
+    }
+
+    .popover .close:active {
+    line-height:8px;
+
+    }
+
+
+[name]:hover,
+.sticker:hover
+{
+   cursor:pointer;
+}

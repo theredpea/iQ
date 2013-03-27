@@ -13,6 +13,25 @@ iQ = function(oOptions){
 
 
 
+iQ.prototype.bindEvents = function()
+{
+
+    //$('body').on('click', '[name]', $.proxy(this.click_tag, this));
+    //TODO: Must load all synonyms here and point them at the proper functions!
+
+    $('body').on('click', '.popover .close', $.proxy(this.click_popoverClose, this));
+}
+
+/*
+iQ.prototype.click_tag = function(e)
+{
+
+    jTag = $(e.target);
+    
+
+
+}
+*/
 
 iQ.prototype.setOptions = function (oOptions) {
 
@@ -60,17 +79,35 @@ iQ.prototype.getElements = function ()
     
 }
 
-iQ.prototype.inflate = function(oResult, jResult)
+iQ.prototype.inflate = function(oResult, jResult, options)
 {
+
+    options = $.extend({bPopover:true}, options);
     if (jResult===undefined)
     { return undefined;
     }
 
-    $.each(oResult, function(propName, propValue){
+    inflateFunc = function(propName, propValue){
         jResult.data(propName, propValue);
-    });
+        if (options.bPopover)
+        {
+            jResult.popover(
+                {
+                    html:true,
+                    content:this.tagPopoverHtml(jResult),
+                    title:'Tag Info <span class="close">x</span>',
+                    placement:'top'
+                }
+            );
+        }
+    };
+
+    //Put each 
+    $.each(oResult, $.proxy(inflateFunc, this));
+    //And cram the whole object there for reference.
     jResult.data('result', oResult);
 }
+
 iQ.prototype.getResults = function (index, result)
 {
     var jResult = $(result),
@@ -493,7 +530,7 @@ iQ.prototype.element = function (oElementOptions) {
 
 	for(elementProperty in filters)
 	{
-		elementPropertyValueFunction = this.element.['get_'+elementProperty];
+		elementPropertyValueFunction = this.element['get_'+elementProperty];
 		
 		stringFilter = filters[elementProperty];
 
@@ -559,25 +596,25 @@ iQ.prototype.element = function (oElementOptions) {
 
 iQ.string = {};
 
-iQ.string.caseAdjust(s, operand, stringFilter)
+iQ.string.caseAdjust = function(str, operand, stringFilter)
 {
 	if (stringFilter.caseSensitive==true 
 		|| stringFilter.caseSensitive.toLowerCase()=='true')
 	{
-		s=s.toLowerCase();
+		str=str.toLowerCase();
 		operand=operand.toLowerCase();
 	}
 
 }
 
-iQ.string.filter_contains = function(s, operand, stringFilter
+iQ.string.filter_contains = function(str, operand, stringFilter)
 {
-	return s.indexOf(operand)>-1;
+	return str.indexOf(operand)>-1;
 }
 
-iQ.string.filter_startsWith = function(s, operand), options
+iQ.string.filter_startsWith = function(str, operand, options)
 {
-	return s.indexOf(operand)==0;
+	return str.indexOf(operand)==0;
 }
 
 iQ.element={};
@@ -749,13 +786,127 @@ iQ.prototype.getContextRef = function(index, domContext){
 
 }
 
-iQ.prototype.bindEvents = function()
+
+iQ.prototype.click_popoverClose = function (e) {
+    e.stopPropagation();
+    e.preventDefault();
+    jClose= $(e.target);
+    jPopover = jClose.closest('.popover');
+    jPopover.prev().trigger('click');
+}
+
+
+iQ.prototype.tagPopoverHtml = function(jTag)
 {
 
+    rowContentFunctions = {
+                            'Value' :'valueInfoHtml',
+                            'Concept': 'conceptInfoHtml',
+                            'Category': 'categoryInfoHtml',
+                            'Unit': 'unitInfoHtml',
+                            'Date': 'dateInfoHtml'
 
-    //TODO: Must load all synonyms here and point them at the proper functions!
+                        };
+
+    var generateRowContent = function(contentType, index, array)
+    {
+
+        return $('<tr></tr>').append(
+                        $('<th></th>').text(contentType),
+                        $('<td></td>').append(this[rowContentFunctions[contentType]](jTag))
+                    );
+    };
+
+    return $('<div></div>').append(
+                $('<table></table>').append(
+                    $('<tbody></tbody>').append(
+
+                                Object.keys(rowContentFunctions).map($.proxy(generateRowContent, this))
+                        
+                    )
+                )
+            ).html();
+}
+
+/*
+
+    oResult = {            //this.getxObj(
+        'name': jResult.attr('name'),
+        'contextRef': sContextId,
+        'startDate'     : cPeriod.startDate,
+        'endDate'       : cPeriod.endDate,
+        'instant'       : cPeriod.instant,
+        'dimensions': cSegment,
+        'entity': cEntity.identifier,
+        'unitRef': sUnitId,
+        'measure': uRef.measure,
+        'numerator': uRef.numerator,
+        'denominator': uRef.denominator,
+        'ixType'        : jResult[0].nodeName
+    };
+
+    */
+
+iQ.prototype.createSticker = function(title, content)
+{
+
+    return $('<div></div>').addClass('sticker').append(
+                                $('<span></span>').addClass('expander').text('+'),
+                                $('<span></span>').addClass('title').text(title)
+                            );
+
 
 }
+iQ.prototype.conceptInfoHtml = function(jTag)
+{
+    sTagName =jTag.attr('name') ||  'No name';
+    return this.createSticker(sTagName).attr('title', sTagName);
+}
+
+iQ.prototype.valueInfoHtml = function(jTag)
+{
+    sValue=jTag.text();
+
+    nScaledValue = parseFloat(sValue.replace(/,/g, ''));
+
+    if (isNaN(nScaledValue))
+    {
+
+        return this.createSticker(sValue);
+    }
+
+    sScale = jTag.attr('scale') || '0';
+    nScale = parseInt(sScale);
+    
+    nValue = nScaledValue * Math.pow(10, nScale);
+
+    if (sValue=='8,879,121,378' || sValue == '38,074' || sValue=='0.52')
+    {
+
+        console.log( ' sValue ' + sValue + ' nScaledValue ' + nScaledValue + ' nValue ' + nValue + ' sScale ' + sScale + ' nScale ' + nScale);
+    }
+    return this.createSticker(nValue);
+}
+
+iQ.prototype.categoryInfoHtml = function(jTag)
+{
+
+    return this.createSticker(jTag.attr('contextref') ||  'No context');
+
+}
+iQ.prototype.unitInfoHtml = function(jTag)
+{
+     return this.createSticker(jTag.attr('unitRef') || 'No unit');
+    
+}
+
+iQ.prototype.dateInfoHtml = function(jTag)
+{
+
+    
+     return this.createSticker(jTag.attr('contextRef') || 'No context');
+}
+
 
 iQ.prototype.initiXbrl = function()
 {

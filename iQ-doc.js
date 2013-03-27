@@ -214,12 +214,14 @@ iQ_tax.prototype.jsonify = function(event)
     var jDoc = $(event.target.result);
     
     var dSchema = jDoc.toArray().filter(function(element, index, array){
-            return(element.constructor.prototype == document.createElement('unrecognized').constructor.prototype && element.tagName.toLowerCase()=='XS:SCHEMA'.toLowerCase())
+            return(element.constructor.prototype == document.createElement('unrecognized').constructor.prototype 
+                    && (element.tagName.toLowerCase()=='XS:SCHEMA'.toLowerCase()
+                        || element.tagName.toLowerCase()=='SCHEMA'.toLowerCase()))
     });
 
     jSchema = $(dSchema);
 
-    var jElements = jSchema.find('xs\\:element'),
+    var jElements = jSchema.find(ns('xs\\:element')),
     sNamespaceUrl = jSchema.attr('targetNamespace'), 
     jsonSchema = {};
 
@@ -249,6 +251,27 @@ iQ_tax.prototype.jsonify = function(event)
 
 
 }
+
+ns = function(prefixedString)
+{
+
+    prefixedStringAndUnprefixedString = prefixedString + ',' + prefixedString.slice(prefixedString.indexOf('\\:')+2);
+
+
+    return prefixedStringAndUnprefixedString;
+
+
+}
+
+n$ = function(prefixedString)
+{
+
+
+    return $(ns(prefixedString));
+
+
+}
+
 
 $(document).ready(function(){
 
