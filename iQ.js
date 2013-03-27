@@ -4,11 +4,13 @@ iQ = function(oOptions){
     this.setOptions(oOptions);
     this.processHeader();
     this.getElements();
-	this.bindEvents();
+    this.console.makeConsole();
 	//this.initiXbrl();
 
 	//this.addResourceTable();
     this.alliX();
+    this.bindEvents();
+
 	}
 
 
@@ -16,22 +18,33 @@ iQ = function(oOptions){
 iQ.prototype.bindEvents = function()
 {
 
-    //$('body').on('click', '[name]', $.proxy(this.click_tag, this));
+    $('body').on('click', '[name]', $.proxy(this.click_tag, this));
     //TODO: Must load all synonyms here and point them at the proper functions!
+    this.body = $('body');
+    this.body.on('click', '.popover .close', $.proxy(this.click_popoverClose, this));
+    this.iQconsole = $('#iQconsole');
 
-    $('body').on('click', '.popover .close', $.proxy(this.click_popoverClose, this));
+    this.body[0].addEventListener('drop', function(e){alert('dropped');});
+
+    ['dragstart', 'dragend'].forEach($.proxy(function(e, index, array){
+
+        //TODO: These events will fire any time anything is dragged, not just stickers, because I removed jQuery's context. However, only stickers are draggable=true
+
+        this.body[0].addEventListener(e, $.proxy(this[e+'_sticker'], this));
+
+    }, this));
+
+
+    ['dragenter', 'dragleave', 'dragover', 'drop', 'mouseleave'].forEach($.proxy(function(e, index, array){
+
+        this.iQconsole[0].addEventListener(e, $.proxy(this[e+'_iQconsole'], this));
+    }, this));
+
+    this.iQconsole.on('mouseleave', $.proxy(this.mouseleave_iQconsole, this));
+
 }
 
-/*
-iQ.prototype.click_tag = function(e)
-{
 
-    jTag = $(e.target);
-    
-
-
-}
-*/
 
 iQ.prototype.setOptions = function (oOptions) {
 
@@ -796,6 +809,74 @@ iQ.prototype.click_popoverClose = function (e) {
 }
 
 
+
+iQ.prototype.dragstart_sticker= function (e) {
+    jSticker = $(e.target);
+    jSticker.addClass('being-dragged');
+    this.iQconsole.addClass('suggestive');
+    e.dataTransfer.setData('iQ', jSticker.attr('data-iq'))
+    //e.originalEvent.dataTransfer.effectAllowed='all';
+    e.dataTransfer.effectAllowed='all';
+}
+
+
+iQ.prototype.dragend_sticker= function (e) {
+    jSticker = $(e.target);
+    this.iQconsole.removeClass('suggestive');
+    jSticker.removeClass('being-dragged');
+}
+
+iQ.prototype.dragover_iQconsole = function(e)
+{
+    if (e.preventDefault) e.preventDefault();
+    e.dataTransfer.dropEffect='copy';
+    console.log('draggingOver');
+    //e.dataTransfer.dropEffect='copy';
+    return false;
+}
+
+iQ.prototype.dragenter_iQconsole= function (e) {
+    jConsole = $(e.target);
+    jConsole.addClass('drag-over');
+    e.dataTransfer.dropEffect='copy';
+}
+
+
+iQ.prototype.dragleave_iQconsole= function (e) {
+    jConsole = $(e.target);
+    jConsole.removeClass('drag-over');
+}
+
+iQ.prototype.mouseleave_iQconsole= function (e) {
+    jConsole = $(e.target);
+    jConsole.removeClass('drag-over');
+}
+
+
+
+
+iQ.prototype.drop_iQconsole= function (e) {
+    if (e.stopPropagation) e.stopPropagation(); // stops the browser from redirecting...why???
+    iQdata = e.dataTransfer.getData('iQ');
+
+    e.dataTransfer.dropEffect='copy';
+    jConsole = $(e.target);
+    jConsole.append($('<div></div>').addClass("iq-clause").text(iQdata));
+}
+
+
+
+iQ.prototype.click_tag = function(e)
+{
+
+    jTag = $(e.target);
+    jTag.toggleClass('clicked');
+    
+
+
+}
+
+
 iQ.prototype.tagPopoverHtml = function(jTag)
 {
 
@@ -850,42 +931,61 @@ iQ.prototype.tagPopoverHtml = function(jTag)
 iQ.prototype.createSticker = function(title, content)
 {
 
-    return $('<div></div>').addClass('sticker').append(
+    return $('<div></div>')
+                //.data('iq-clause', title) // This won't work, maybe because it wasn't injected into the DOM, yet?
+                .attr('data-iq', title)
+                .addClass('sticker')
+                .attr('draggable', 'true').append(
                                 $('<span></span>').addClass('expander').text('+'),
                                 $('<span></span>').addClass('title').text(title)
                             );
 
 
 }
+
+iQ.prototype.conceptFilterText = function(concept)
+{
+
+
+}
+
 iQ.prototype.conceptInfoHtml = function(jTag)
 {
     sTagName =jTag.attr('name') ||  'No name';
-    return this.createSticker(sTagName).attr('title', sTagName);
+    sAbbrevTagName = sTagName;
+    if (sAbbrevTagName.length>35)
+    {
+        sAbbrevTagName = sTagName.slice(0,35) + "...";
+    }  
+    return this.createSticker(sAbbrevTagName).attr('title', sTagName).attr('data-iq', sTagName);
+
 }
+
+iQ.prototype.value = {
+
+    scaleValue : function(sValue, sScale)
+    {
+
+
+        nScaledValue = parseFloat(sValue.replace(/,/g, ''));
+
+        if (isNaN(nScaledValue))
+        {
+
+            return sValue;
+        }
+
+        nScale = parseInt(sScale);
+        
+        return nScaledValue * Math.pow(10, nScale);
+    }
+
+};
 
 iQ.prototype.valueInfoHtml = function(jTag)
 {
-    sValue=jTag.text();
 
-    nScaledValue = parseFloat(sValue.replace(/,/g, ''));
-
-    if (isNaN(nScaledValue))
-    {
-
-        return this.createSticker(sValue);
-    }
-
-    sScale = jTag.attr('scale') || '0';
-    nScale = parseInt(sScale);
-    
-    nValue = nScaledValue * Math.pow(10, nScale);
-
-    if (sValue=='8,879,121,378' || sValue == '38,074' || sValue=='0.52')
-    {
-
-        console.log( ' sValue ' + sValue + ' nScaledValue ' + nScaledValue + ' nValue ' + nValue + ' sScale ' + sScale + ' nScale ' + nScale);
-    }
-    return this.createSticker(nValue);
+    return this.createSticker(this.value.scaleValue(jTag.text(), jTag.attr('scale') || '0'));
 }
 
 iQ.prototype.categoryInfoHtml = function(jTag)
@@ -1052,7 +1152,7 @@ iQ.att =[
   iQ.prototype.alliX = function()
   {
 
-  	jPreQualElements.css('background-color', 'yellow');
+  	//jPreQualElements.css('background-color', 'yellow');
 
   }
 
@@ -1104,6 +1204,15 @@ $.proxy(this.getUnitRef, this));
 
 
 };
+
+iQ.prototype.console = {
+
+    makeConsole: function()
+    {
+
+        $('<div></div>').attr('id', 'iQconsole').appendTo('html');
+    }
+}
 
   $(document).ready(function(){
 

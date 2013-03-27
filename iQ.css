@@ -15,10 +15,23 @@ th{text-align:left;}
 {
    color:white;
    text-indent:0px;
+   height:34px;
+   margin:2px;
+   box-sizing:border-box;
+   display:inline-block;
+}
+
+.sticker.being-dragged
+{
+
+   border:2px dashed white;
+   background-color:grey;
 }
 
 .sticker .title,
-.sticker .expander
+.sticker .expander,
+.iq-clause
+
 {
 
    display:inline-block;
@@ -29,7 +42,9 @@ th{text-align:left;}
    vertical-align:top;
 }
 
-.sticker .title
+.sticker .title,
+.iq-clause
+
 {
 
    font-weight:normal;
@@ -37,8 +52,6 @@ th{text-align:left;}
    border-radius:5px;
    -webkit-border-radius:5px;
    -moz-border-radius:5px;
-   border-top-left-radius:0px;
-   border-bottom-left-radius:0px;
 
    line-height:1.5em;
 
@@ -46,6 +59,25 @@ th{text-align:left;}
    max-width:330px;
    overflow:hidden;
    text-indent:0px;
+}
+
+.sticker .title
+{
+
+   border-top-left-radius:0px;
+   border-bottom-left-radius:0px;
+
+}
+
+.iq-clause
+{
+   display:block;
+   margin:4px;
+   font-weight:bold;
+   color:white;
+   font-family:Arial, sans-serif;
+
+
 }
 
 .sticker .expander
@@ -87,6 +119,8 @@ th{text-align:left;}
    text-align:center;
    cursor:pointer;
    background-color:#CCC;
+   width:20px;
+   height:20px;
 /*
 border-right:2px solid black;
 border-bottom:2px solid black;
@@ -112,7 +146,63 @@ line-height:10px;
 
 
 [name]:hover,
-.sticker:hover
+.sticker .expander:hover
 {
    cursor:pointer;
+}
+
+[name]
+{
+
+   background-color:yellow;
+}
+
+[name]:hover,
+[name].clicked
+{
+   background-color:#18b1c9;
+}
+
+.sticker .title:hover
+{
+   cursor:move;
+}
+
+html, body
+{
+
+   position:relative;
+   padding:0;
+   margin:0;
+
+}
+
+#iQconsole
+{
+
+   position:fixed;
+   top:0px;
+   width:400px;
+   height:100%;
+   left:-350px;
+   transition: all 0.5s ease-out;
+
+   -webkit-transition: all 0.5s ease-out;
+   background-color:rgba(200,200,200,0.5);
+
+ 
+}
+
+
+#iQconsole.suggestive
+{
+
+   left:-300px;
+}
+
+#iQconsole.drag-over,
+#iQconsole:hover
+{
+   background-color:rgba(150,150,150,0.8);
+   left:0px;
 }
