@@ -180,7 +180,7 @@ iQ.prototype.getResults = function (index, result)
         this.oResultSet.push(oResult);
 
         //------------------CONTEXTREF
-        if(!$.isEmptyObject(this.contextRef))
+        if(!$.isEmptyObject(this.contextRef) && this.contextRef[sContextId]!==undefined)
         {
 
             if(this.contextRef[sContextId].results===undefined)
@@ -194,7 +194,7 @@ iQ.prototype.getResults = function (index, result)
 
         }
         //------------------NAMEREF
-        if(!$.isEmptyObject(this.nameRef))
+        if(!$.isEmptyObject(this.nameRef) && this.nameRef[oResult.name]!==undefined)
         {
 
             if (this.nameRef[oResult.name] === undefined) {
@@ -208,7 +208,7 @@ iQ.prototype.getResults = function (index, result)
         }
 
         //------------------UNITREF
-        if(!$.isEmptyObject(this.unitRef))
+        if(!$.isEmptyObject(this.unitRef) && this.unitRef[sUnitId]!==undefined)
         {
 
 
