@@ -746,8 +746,8 @@ iQ.prototype.result_and = function()
 iQ.prototype.date = function(dateQueryString)
 {   
 
-    justDateQueryString = 
-    pointRegEx = /(\d{4})-?(\d{2})?-?(\d{2}))/;
+    justDateQueryString = dateQueryString.replace(/[<>=]/,'');
+    pointRegEx = /(\d{4})-?(\d{2})?-?(\d{2})/;
 /*
 dr.exec('2012')
     ["2012", "2012", undefined, undefined]
@@ -761,7 +761,7 @@ dr.exec('2012-05-08')
     ["2012-05-08", "2012", "05", "08"]
 
 */
-    spanRegEx = //;
+    spanRegEx = /(\d)/;
 
 
     var pointQueryOptions = 
@@ -1087,6 +1087,22 @@ iQ.prototype.click_tag = function(e)
 {
 
     jTag = $(e.target);
+    if(!jTag.data('popover'))
+    {
+    jTag.popover(
+                {
+                    html:true,
+                    content:this.tagPopoverHtml(jTag),
+                    title:'Tag Info <span class="close">x</span>',
+                    placement:'top'
+                }
+            );
+
+    jTag.popover('show');
+    }
+
+    
+
     jTag.toggleClass('clicked');
     
 
