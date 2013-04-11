@@ -5,6 +5,7 @@ iQ = function(oOptions){
     this.processHeader();
     this.getElements();
     this.console.makeConsole();
+    this.makeFilterStats();
 	//this.initiXbrl();
 
 	//this.addResourceTable();
@@ -14,11 +15,42 @@ iQ = function(oOptions){
 	}
 
 
+iQ.prototype.showFilterStats = function(e)
+{
+
+
+if($('thead>tr',this.filterStats).length==0)
+{
+
+    $('thead', this.filterStats).append($('<tr></tr>').append(
+
+        $.map(e.stats, function(value, property){
+            return $('<th></th>').text(property);
+
+            })
+
+        ))
+}
+
+$('#filterStats tbody').append($('<tr></tr>').append(
+
+        $.map(e.stats, function(value, property){
+            return $('<td></td>').text(value);
+
+            })
+
+        )
+    );
+
+}
+
 
 iQ.prototype.bindEvents = function()
 {
 
+
     $('body').on('click', '[name]', $.proxy(this.click_tag, this));
+    $('body').on('iQ_filterStats',  $.proxy(this.showFilterStats, this));
     //TODO: Must load all synonyms here and point them at the proper functions!
     this.body = $('body');
     this.body.on('click', '.popover .close', $.proxy(this.click_popoverClose, this));
@@ -668,35 +700,98 @@ iQ.element.get_name = function(xbrlValue)
  
 if(!iQ.StringQuery) {iQ.StringQuery = {};}
 
-iQ.prototype.result_or = function(eachFunc)
+iQ.prototype.filter = function(index, element)
+{
+
+
+    if(this.filterFunc($(element)))
+    {
+
+        this.jResultSetTemp = this.jResultSetTemp.add($(element));
+    }
+    else
+    {
+
+        this.jExcludeSetTemp = this.jExcludeSetTemp.add($(element));
+    }
+}
+
+iQ.prototype.result_or = function()
 {
     //Used to allow options
     //$.extend(this.o, options);
     //Searching among those who have been discarded; 
         //Don't search those already confirmed, they're already confirmed; this is OR!
         //Search those which have been disqualified (this.jExcludeSet), they could still be confirmed; this is OR!
-    this.jExcludeSet.each($.proxy(eachFunc, this));
+    this.jExcludeSet.each($.proxy(this.filter, this));
 
     //Add to jResultSet; it just gets bigger! This is OR!
     this.jResultSet = this.jResultSet.add($(this.jResultSetTemp));
     //ExcludeSet gets smaller! This is OR!
     this.jExcludeSet = $(this.jExcludeSetTemp);
-    this.jResultSetTemp = $();
-
-    this.jExcludeSetTemp = $();
 }
 
-iQ.prototype.result_and = function(eachFunc)
+iQ.prototype.result_and = function()
 {
     //Used to allow options
     //$.extend(this.o, options);
-    this.jResultSet.each($.proxy(eachFunc, this));
+
+    this.jResultSet.each($.proxy(this.filter, this));
 
     //Remove from jResultSet; it just ets smaller! This is AND!
     this.jResultSet=$(this.jResultSetTemp);
     this.jExcludeSet = this.jExcludeSet.add($(this.jExcludeSetTemp));
-    this.jResultSetTemp = $();
-    this.jExcludeSetTemp = $();
+}
+
+iQ.prototype.date = function(dateQueryString)
+{   
+
+    justDateQueryString = 
+    pointRegEx = /(\d{4})-?(\d{2})?-?(\d{2}))/;
+/*
+dr.exec('2012')
+    ["2012", "2012", undefined, undefined]
+dr.exec('2012-')
+    ["2012-", "2012", undefined, undefined]
+dr.exec('2012-05')
+    ["2012-05", "2012", "05", undefined]
+dr.exec('2012-05-')
+    ["2012-05-", "2012", "05", undefined]
+dr.exec('2012-05-08')
+    ["2012-05-08", "2012", "05", "08"]
+
+*/
+    spanRegEx = //;
+
+
+    var pointQueryOptions = 
+    {
+        '>': this.pointGreaterThan,
+        '<': this.pointLessThan,
+        '=': this.pointEqualTo
+    }
+
+
+
+}
+
+iQ.prototype.point = function(pointQueryString)
+{
+
+
+
+}
+
+
+iQ.prototype.getValueList= function()
+{
+
+    oResults = this.get();
+
+    this.jResultSet.each(
+        )
+
+
 }
 
 iQ.prototype.get = function()
@@ -711,52 +806,92 @@ iQ.prototype.color = function(color)
     return this;
 }
 
-iQ.prototype.elementContains = function(elementQueryString, element)
+
+iQ.prototype.elementContains = function(element)
 {
 
+    return $(element).attr('name').toLowerCase().indexOf(this.queryString.toLowerCase())>-1;
 
-    if($(element).attr('name').toLowerCase().indexOf(elementQueryString.toLowerCase())>-1)
-    {
 
-        this.jResultSetTemp = this.jResultSetTemp.add($(element));
-    }
-    else
-    {
 
-        this.jExcludeSetTemp = this.jExcludeSetTemp.add($(element));
-    }
+}
+iQ.prototype.prefixIs = function(element)
+{
 
+    //All elements should have names
+    //All names must be QNames. QNames must have prefixes.
+    //But if they do not have prefixes... TODO: Decide how to treat. For now, exclude them.
+
+
+    return $(element).attr('name').split(':')[0]==this.queryString;
 
 }
 
 iQ.prototype.element = function (elementQueryString) {
+
+    if(elementQueryString.indexOf(':')>-1)
+    {
+        elementQueryStringParts = elementQueryString.split(':');
+        prefix = elementQueryStringParts[0];
+        elementQueryString= elementQueryStringParts[1];
+        this.filterFunc = this.prefixIs
+    }
+
     queryOptions = {
         '*' : this.elementContains,
         '^' : this.elementStartsWith,
         '$' : this.elementEndsWith
     }
 
-    
-    for (option in queryOptions)
-    {
+    var firstChar = elementQueryString.slice(0,1);
+    this.filterFunc= queryOptions[firstChar];
+    this.queryString = elementQueryString.slice(1);
 
-        regEx = new RegExp('^\\'+option); // Starts with the option
-        if (regEx.exec(elementQueryString)!=null) //If it does start with the option; if there is a match
-        {
-
-           resultFunc =  function(index, element) { $.proxy(queryOptions[option], this)(elementQueryString.slice(1), element); };
-           break;
-        }
-    }
-
-    return this.result($.proxy(resultFunc, this));
+    return this.result();
     
 }
 
-iQ.prototype.result = function (eachFunc)
+iQ.prototype.result = function ()
 {
 
-    this['result_'+this.operator](eachFunc);
+    before = new Date();
+    this['result_'+this.operator]();
+    after = new Date();
+    var effect = {};
+
+    if(this.operator=='and')
+    {
+        effect = 
+        {
+            added : 0
+        }
+    }
+    else
+    {
+        effect = 
+        {
+            excluded:0
+        }
+    }
+
+
+    filterStatsEvent = $.Event('iQ_filterStats',{
+            stats:$.extend({
+                count:          this.filterStats.find('tr').length,
+                operator:       this.operator,
+                duration:       (after-before) + 'ms',
+                excluded:       this.jExcludeSetTemp.length, 
+                added:          this.jResultSetTemp.length,
+                nonresults:     this.jExcludeSet.length, 
+                results:        this.jResultSet.length,
+
+        }, effect)});
+
+    $('body').trigger(filterStatsEvent);
+
+    this.jResultSetTemp = $();
+    this.jExcludeSetTemp = $();
+
     return this;
 }
 
@@ -764,7 +899,7 @@ iQ.string = function()
 {
 
 
-    }
+}
 
 /*
 
@@ -1286,6 +1421,12 @@ $.proxy(this.getUnitRef, this));
 
 
 };
+
+iQ.prototype.makeFilterStats = function(){
+
+    this.filterStats = $('<div></div>').attr('id', 'filterStats').append($('<table></table>').prepend($('<thead></thead>'), $('<tbody></tbody>'))).appendTo('html');
+
+}
 
 iQ.prototype.console = {
 
