@@ -66,7 +66,27 @@ iQ.prototype.setOptions = function (oOptions) {
     this.unitRef = {};
     this.nameRef = {};
     this.oResultSet = [];
+    this.operator='and';
+    this.jResultSet = $();
+    this.jExcludeSet = $();
+    this.jResultSetTemp = $();
+    this.jExcludeSetTemp = $();
 
+}
+
+
+iQ.prototype.and = function()
+{
+
+    this.operator='and';
+    return this;
+}
+
+iQ.prototype.or = function()
+{
+
+    this.operator='or';
+    return this;
 }
 
 
@@ -80,8 +100,8 @@ iQ.prototype.getElements = function ()
     this.jAllSet = jPreQualElements.slice(0);
     this.jResultSet = jPreQualElements.slice(0);
     this.jExcludeSet = $('');
-    this.jResultSetTemp = [];
-    this.jExcludeSetTemp = [];
+    this.jResultSetTemp = $();
+    this.jExcludeSetTemp = $();
     this.history={};
 //Represents inter logic, not intra logic
 	this.logic = 'and';
@@ -104,6 +124,7 @@ iQ.prototype.inflate = function(oResult, jResult, options)
         jResult.data(propName, propValue);
         if (options.bPopover)
         {
+            /*
             jResult.popover(
                 {
                     html:true,
@@ -112,6 +133,7 @@ iQ.prototype.inflate = function(oResult, jResult, options)
                     placement:'top'
                 }
             );
+            */
         }
     };
 
@@ -646,10 +668,10 @@ iQ.element.get_name = function(xbrlValue)
  
 if(!iQ.StringQuery) {iQ.StringQuery = {};}
 
-iQ.prototype.result_or = function(eachFunc, options)
+iQ.prototype.result_or = function(eachFunc)
 {
-    
-    $.extend(this.o, options);
+    //Used to allow options
+    //$.extend(this.o, options);
     //Searching among those who have been discarded; 
         //Don't search those already confirmed, they're already confirmed; this is OR!
         //Search those which have been disqualified (this.jExcludeSet), they could still be confirmed; this is OR!
@@ -659,13 +681,83 @@ iQ.prototype.result_or = function(eachFunc, options)
     this.jResultSet = this.jResultSet.add($(this.jResultSetTemp));
     //ExcludeSet gets smaller! This is OR!
     this.jExcludeSet = $(this.jExcludeSetTemp);
-    this.jResultSetTemp = [];
+    this.jResultSetTemp = $();
 
-    this.jExcludeSetTemp = [];
+    this.jExcludeSetTemp = $();
 }
 
+iQ.prototype.result_and = function(eachFunc)
+{
+    //Used to allow options
+    //$.extend(this.o, options);
+    this.jResultSet.each($.proxy(eachFunc, this));
 
-iQ.element = function () {
+    //Remove from jResultSet; it just ets smaller! This is AND!
+    this.jResultSet=$(this.jResultSetTemp);
+    this.jExcludeSet = this.jExcludeSet.add($(this.jExcludeSetTemp));
+    this.jResultSetTemp = $();
+    this.jExcludeSetTemp = $();
+}
+
+iQ.prototype.get = function()
+{
+    return this.jResultSet;
+
+}
+
+iQ.prototype.color = function(color)
+{
+    this.jResultSet.css('background-color', color);
+    return this;
+}
+
+iQ.prototype.elementContains = function(elementQueryString, element)
+{
+
+
+    if($(element).attr('name').toLowerCase().indexOf(elementQueryString.toLowerCase())>-1)
+    {
+
+        this.jResultSetTemp = this.jResultSetTemp.add($(element));
+    }
+    else
+    {
+
+        this.jExcludeSetTemp = this.jExcludeSetTemp.add($(element));
+    }
+
+
+}
+
+iQ.prototype.element = function (elementQueryString) {
+    queryOptions = {
+        '*' : this.elementContains,
+        '^' : this.elementStartsWith,
+        '$' : this.elementEndsWith
+    }
+
+    
+    for (option in queryOptions)
+    {
+
+        regEx = new RegExp('^\\'+option); // Starts with the option
+        if (regEx.exec(elementQueryString)!=null) //If it does start with the option; if there is a match
+        {
+
+           resultFunc =  function(index, element) { $.proxy(queryOptions[option], this)(elementQueryString.slice(1), element); };
+           break;
+        }
+    }
+
+    return this.result($.proxy(resultFunc, this));
+    
+}
+
+iQ.prototype.result = function (eachFunc)
+{
+
+    this['result_'+this.operator](eachFunc);
+    return this;
 }
 
 iQ.string = function()
@@ -674,18 +766,7 @@ iQ.string = function()
 
     }
 
-iQ.prototype.result_and = function(eachFunc, eachOperand)
-{
-    $.extend(this.o, options);
-    this.jResultSet.each($.proxy(eachFunc, this));
-
-    //Remove from jResultSet; it just ets smaller! This is AND!
-    this.jResultSet=$(this.jResultSetTemp);
-    this.jExcludeSet = this.jExcludeSet.add($(this.jExcludeSetTemp));
-    this.jResultSetTemp = [];
-    this.jExcludeSetTemp = [];
-}
-
+/*
 
 iQ.prototype.result = function(i, domResult) { 
     //These could be searching the ResultSet, if it is AND, else the ExcludeSet, if it is OR
@@ -698,6 +779,7 @@ iQ.prototype.result = function(i, domResult) {
     }
     
 };
+*/
 
 iQ.StringQuery.contains = function(result, options)
 {

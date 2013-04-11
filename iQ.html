@@ -3,12 +3,131 @@
 <html>
 <head>
 	<meta http-equiv="Content-Type" content"text/html; charset=US-ASCII">
-	<title>iQ Playground </title>
-	<script src="http://code.jquery.com/jquery-latest.min.js"></script>
+	<title>iQ</title>
+	<script src="http://code.jquery.com/jquery-latest.min.js" type="text/javascript"></script>
 	<script src="iQ.js" type="text/javascript"> </script>
 	</head>
 
 	<body>
+		<h1>iQ</h1>
+		<h2>iXBRL Query Language</h2>
+		<nav>
+
+			<ul>
+				<li><a href="#what">What</a></li>
+				<li><a href="#why">Why</a></li>
+				<li><a href="#how">How</a></li>
+			</ul>
+		</nav>
+
+			<section id="what">
+				<header> 
+					<h3>What is...</h3>
+				</header>
+					<dl>
+
+						<dt>XBRL</dt>
+						<dd>eXtensible Business Reporting Language. Example. Not very reader-friendly. But provides rich business data: accounts (i.e. Cash), dates (i.e. 2013), and units (i.e. USD).
+						</dd>
+						<dt>inline</dt>
+						<dd>Describes anything written inside HTML. Like an inline style (styles control colors, sizes, and positions) or an inline script (scripts control interactions).</dd>
+						<dt>HTML</dt>
+						<dd>HyperText Markup Language. What you see in your internet browser. Examples include almost everything you see and use on the web.
+						</dd>
+						<dt>iXBRL</dt>
+						<dd>inline XBRL. XBRL written inside HTML, so you can see it in your browser. Very reader-friendly. But no different than HTML. Hard to use the rich business data.</dd>
+						<dt>iQ</dt>
+						<dd>inline XBRL Query (Language). A way to use the rich business data. Examples include: finding, creating, comparing, and validating.</dd>
+
+					</dl>
+			</section>
+
+			<section id="why">
+				<header> 
+					<h3>Why should I use...</h3>
+				</header>
+					<dl>
+
+						<dt>Browsers</dt>
+						<dd>They are free. There are many choices. They connect you to the web. They are powerful, fast, beautiful and always-improving.
+						</dd>
+						<dt>HTML</dt>
+						<dd>It is standard. It is international. Browsers recognize it. Schools teach it. Businesses use it. HTML can express most kinds of human documents/artifacts. </dd>
+						<dt>XBRL</dt>
+						<dd>Like HTML, XBRL is standard. Like HTML, XBRL is international. But browsers don't recognize XBRL in meaningful ways.
+						</dd>
+						<dt>iXBRL</dt>
+						<dd>Create documents for browser-viewing with HTML, but add meaningful business information with XBRL. Send it to anyone with a Browser, and it's at least as good as a PDF, a Word Document, and a plain old website.</dd>
+						<dt>iQ</dt>
+						<dd>Makes iXBRL far better than a PDF, a Word Document, a website, an Excel Spreadsheet, and a Powerpoint document. Combined. Free to use, free to consume, easy to learn. </dd>
+
+					</dl>
+			</section>
+			<section id="how">
+				<header> 
+					<h3>How does it work...</h3>
+				</header>
+				<section>
+					<h4>iXBRL</h4>
+					<h5>Business Info</h5>
+					<p>
+						Business data can be diverse. But it must express basic information. iXBRL can express these things:
+					</p>
+					<dl>
+						<dt>Concept</dt>
+						<dd><p>What is it?</p>
+							<p>Examples: Cash. Number of Subscribers. Taxes Due. Rental Rate.</p>
+							<p>AKA: Element. Tag. Account. Line Item.</p>
+						</dd>
+						<dt>Date</dt>
+						<dd>
+							<p>When is it?</p>
+							<p>Examples: The year ending 2013. The first three months of 2014. On April 11th, 2013.</p>
+							<p>AKA: Instant. Duration. Time span. Point in time.</p>
+						</dd>
+						
+						<dt>Unit</dt>
+						<dd>
+							<p>How is it measured?</p>
+							<p>Examples: US Dollars ($). Euro (€). Square Feet. Barrels of Oil. Customers.</p>
+							<p>AKA: Denomination. </p>
+							
+						</dd>
+
+					</dl>
+					<p>iXBRL can express other business information. Like Accounting Debits and Credits. Or Business Segments (i.e. European sales vs American sales). But let's start with the basics.
+				</section>
+				<section>
+					<h4>iQ</h4>
+					<h5>Finding</h5>
+					<p>
+						The core of iQ is finding.
+					</p>
+					<p>
+						The "Q" in "iQ" stands for "Query". And that's how you find business value(s): writing simple Queries.
+					</p>
+					<p>
+						Queries suggest SQL which work with databases and need special computers and super-smart people.
+					</p>
+					<p>
+						But iQ is more like jQuery and works with documents and need only your browser and a willingness to learn.
+					</p>
+					<p>How to find all values that use the same concept.:</p>
+					<textarea>iQ.concept('cash')
+					</textarea>
+
+					<p>How to find all values that use the same date:</p>
+					<textarea>iQ.date('2013')
+					</textarea>
+
+
+					<p>How to find all values that use the same unit:</p>
+					<textarea>iQ.unit('USD')
+					</textarea>
+				</section>
+					
+			</section>
+
 
 	</body>
 </html>
