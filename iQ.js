@@ -777,12 +777,11 @@ iQ.prototype.result_and = function()
     this.jExcludeSet = this.jExcludeSet.add($(this.jExcludeSetTemp));
 }
 
-iQ.prototype.date = function(dateQueryString)
-{   
+iQ.prototype.dateFromIso = function(dateString)
+{
 
-    justDateQueryString = dateQueryString.replace(/[<>=]/,'');
-    pointRegEx = /(\d{4})-?(\d{2})?-?(\d{2})?/g;
-    dateArray = pointRegEx.exec(justDateQueryString);
+    isoRegEx = /(\d{4})-?(\d{2})?-?(\d{2})?/g;
+    dateArray = isoRegEx.exec(dateString);
 
     /*
     dr.exec('2012')
@@ -797,9 +796,6 @@ iQ.prototype.date = function(dateQueryString)
         ["2012-05-08", "2012", "05", "08"]
 
     */
-
-    spanRegEx = /P(\d*)Y(\d*)M(\d*)D/;
-
     y = parseFloat(dateArray[1]);
     m = parseFloat(dateArray[2])-1;
     d = parseFloat(dateArray[3]);
@@ -810,11 +806,22 @@ iQ.prototype.date = function(dateQueryString)
     y=y?y:0; //
     m=m?m:0; // First month; 0-index
     d=d?d:1; // First of a month
+    return new Date(y,m,d);
 
-    this.queryObject = new Date(y, m, d);
+}
+iQ.prototype.date = function(dateQueryString)
+{   
+
+    justDateQueryString = dateQueryString.replace(/[<>=]/,'');
 
 
-    return this.queryObject;
+    spanRegEx = /P(\d*)Y(\d*)M(\d*)D/;
+
+    this.queryObject = this.dateFromIso(justDateQueryString);
+    this.filterFunc = this.dateIs;
+
+    return this.result();
+
 
     var pointQueryOptions = 
     {
@@ -890,12 +897,40 @@ iQ.prototype.elementContains = function(element)
 
 }
 
+iQ.prototype.elementStartsWith = function(element)
+{
+
+    return $(element).attr('name').split(':')[1].toLowerCase().indexOf(this.queryObject.toLowerCase())==0;
+
+}
+
+
+iQ.prototype.elementEndsWith = function(element)
+{
+
+    return $(element).attr('name').split(':')[1].toLowerCase().slice(-this.queryObject.length)==this.queryObject.toLowerCase();
+
+}
+
 
 iQ.prototype.elementIs = function(element)
 
 {
   
     return $(element).attr('name').split(':')[1].toLowerCase()==this.queryObject.toLowerCase();
+
+}
+
+iQ.prototype.dateIs = function(element)
+{
+
+    var cRef = $(element).attr('contextref');
+    var context = this.contextRef[cRef];
+
+    var compDate = context.period.instant || context.period.endDate;
+
+    return this.queryObject.getTime() == compDate.getTime();
+
 
 }
 
@@ -1091,7 +1126,7 @@ iQ.prototype.getContextRef = function(index, domContext){
         {
             sEl = lPeriods[i];
             jEl = jPeriod.find('xbrli\\:' + sEl);
-            oContext.period[sEl] =  jEl.length>0? new Date(jEl.text()): '';
+            oContext.period[sEl] =  jEl.length>0? this.dateFromIso(jEl.text()): undefined; // Using undefined vs '' so I can do an or.
 				
         }
         jSegment = jContext.find('xbrli\\:segment');
