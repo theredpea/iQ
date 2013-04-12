@@ -1,208 +1,140 @@
-*
-{
-   text-indent:0px;
+   *
+   {
+      box-sizing:border-box;
+      -webkit-box-sizing:border-box;
+   }
+
+   html
+   {
+      padding:0;
+   }
+
+   a, a:hover, a:active, a:visited{
+      text-decoration:none;
+      color:white;
+
+   }
+
+   body
+   {
+
+      font-family:Arial, sans-serif;
+      padding:0;
+      margin:0;
+   }
+
+#what,
+#why
+{float:left;
+width:50%;
 }
 
-th{text-align:left;}
-.popover
+#how
 {
+clear:both;
 
-   max-width:600px;
-   min-width:500px;
 }
 
-.sticker
+#how section
 {
-   color:white;
-   text-indent:0px;
-   height:34px;
-   margin:2px;
-   box-sizing:border-box;
-   display:inline-block;
+   float:left;
+width:50%;
+margin:0;
+
 }
 
-.sticker.being-dragged
+#header
 {
-
-   border:2px dashed white;
+   margin:0;
    background-color:grey;
-}
-
-.sticker .title,
-.sticker .expander,
-.iq-clause
-
-{
-
-   display:inline-block;
-   padding:5px 10px;
-   height:30px;
-   box-sizing:border-box;
-   -webkit-box-sizing:border-box;
-   vertical-align:top;
-}
-
-.sticker .title,
-.iq-clause
-
-{
-
-   font-weight:normal;
-   background-color:#18b1c9;
-   border-radius:5px;
-   -webkit-border-radius:5px;
-   -moz-border-radius:5px;
-
-   line-height:1.5em;
-
-   white-space:nowrap;
-   max-width:330px;
-   overflow:hidden;
-   text-indent:0px;
-}
-
-.sticker .title
-{
-
-   border-top-left-radius:0px;
-   border-bottom-left-radius:0px;
-
-}
-
-.iq-clause
-{
-   display:block;
-   margin:4px;
-   font-weight:bold;
    color:white;
-   font-family:Arial, sans-serif;
-
 
 }
 
-.sticker .expander
+#header h1{
+   margin-top:0;
+   font-size:4em;
+   padding-left:0.25em;
+   padding-top:0.5em;
+   margin-bottom:0.25em;
+   display:inline-block;
+}
+
+#header ul
 {
-   -webkit-border-radius:5px;
-   -moz-border-radius:5px;
-   border-top-right-radius:0px;
-   border-bottom-right-radius:0px;
-   font-weight:bolder;
-   background-color:#166f99;
-   width:30px;
-   font-size:1.5em;
-   line-height:0.75em;
-   text-indent:0px;
-}
-
-
-.sticker .expander:active
-{
-
-   background-color:#222;
-}
-
-.popover-title
-{
-   max-width:auto; 
-   font-size:1.5em;
-   font-weight:bold;
-   font-style:italic;
-}
-.popover .close {
-   position:absolute;
-   right:  5px;
-   top:    5px;
-   display:block;
-   padding:5px;
-   color:black;
-   font-weight:lighter;
-   text-align:center;
-   cursor:pointer;
-   background-color:#CCC;
-   width:20px;
-   height:20px;
-/*
-border-right:2px solid black;
-border-bottom:2px solid black;
-    */
-border-radius:          12px;
--webkit-border-radius:  12px;
--moz-border-radius:     12px;
-height: 24px;
-width:  24px;
-font-size:20px;
-line-height:10px;
-}
-
-    .popover .close:hover {
-        background-color: grey;
-        color: white;
-    }
-
-    .popover .close:active {
-    line-height:8px;
-
-    }
-
-
-[name]:hover,
-.sticker .expander:hover
-{
-   cursor:pointer;
-}
-
-[name]
-{
-
-   background-color:yellow;
-}
-
-[name]:hover,
-[name].clicked
-{
-   background-color:#18b1c9;
-}
-
-.sticker .title:hover
-{
-   cursor:move;
-}
-
-html, body
-{
-
-   position:relative;
+   margin:0;
    padding:0;
+   background-color:#007a78;
+}
+#header h2
+{
+   display:inline-block;
+   font-weight:lighter;
+   font-style:italic;
+   margin-left:1em;
+}
+
+nav h3
+{
+
+   display:none;
+}
+
+#modules
+{
+   display:none;
+}
+#header li
+{
+   text-align:center;
+   display:inline-block;
+   list-style:none;
+   width:200px;
+   font-size:2em;
+   padding:0.5em;
+   text-transform:lowercase;
+   background-color:#0eb2a7;
+   border-right:;
    margin:0;
 
 }
 
-#iQconsole
+#header li a
 {
 
-   position:fixed;
-   top:0px;
-   width:400px;
-   height:100%;
-   left:-350px;
-   transition: all 0.5s ease-out;
-
-   -webkit-transition: all 0.5s ease-out;
-   background-color:rgba(200,200,200,0.5);
-
- 
+width:100%;
+display:block;
+margin:0;
 }
 
+#header li:hover
+{
+   background-color:black;
 
-#iQconsole.suggestive
+}
+
+dt
 {
 
-   left:-300px;
+   font-weight:bolder;
+
 }
 
-#iQconsole.drag-over,
-#iQconsole:hover
+#content section
+{padding:20px;}
+
+#content a,
+#content a:visited,
+#content a:hover,
+#content a:active
+
 {
-   background-color:rgba(150,150,150,0.8);
-   left:0px;
+   color:#0eb2a7;
 }
+
+#content a:hover
+{
+   text-decoration: underline
+}
+
+#content 
