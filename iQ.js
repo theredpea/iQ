@@ -4,7 +4,7 @@ iQ = function(oOptions){
     this.setOptions(oOptions);
     this.processHeader();
     this.getElements();
-    this.console.makeConsole();
+    this.makeConsole(); // was this.console.makeConsole();
     this.makeFilterStats();
 	//this.initiXbrl();
 
@@ -18,7 +18,8 @@ iQ = function(oOptions){
 iQ.prototype.showFilterStats = function(e)
 {
 
-
+e.preventDefault();
+e.stopPropagation();
 if($('thead>tr',this.filterStats).length==0)
 {
 
@@ -44,17 +45,49 @@ $('#filterStats tbody').append($('<tr></tr>').append(
 
 }
 
+//TODO:  Run this through results, so the user can see the number of results/included go back to all possible results? 
+//Even though this shouldn't take long, and so duration info may not be meaningful.
+iQ.prototype.all = function()
+{
+
+
+    this.jResultSet = this.jAllSet;
+    return this;
+
+}
 
 iQ.prototype.bindEvents = function()
 {
 
 
-    $('body').on('click', '[name]', $.proxy(this.click_tag, this));
-    $('body').on('iQ_filterStats',  $.proxy(this.showFilterStats, this));
+
     //TODO: Must load all synonyms here and point them at the proper functions!
-    this.body = $('body');
-    this.body.on('click', '.popover .close', $.proxy(this.click_popoverClose, this));
-    this.iQconsole = $('#iQconsole');
+    
+    var eventArgs=  [
+        ['click', '[name]', $.proxy(this.click_tag, this)],
+        ['click', '.popover .close', $.proxy(this.click_popoverClose, this)]
+        
+    ];
+
+    //(Bad?) Way to prevent attaching multiple listeners.
+    eventArgs.forEach($.proxy(function(ev, index, eventArgs){
+        
+        /*this.body.off(ev[0]);
+        if (ev.length==2){
+            this.body.on(ev[0], ev[1]);
+        }
+        else if (ev.length==3)
+        {
+            */
+            this.body.on(ev[0], ev[1], ev[2]);
+        /*}*/
+
+    }, this));
+
+
+    //this.body.on('click', '[name]', $.proxy(this.click_tag, this));
+    //this.body.on('iQ_filterStats',  $.proxy(this.showFilterStats, this));
+    //this.body.on('click', '.popover .close', $.proxy(this.click_popoverClose, this));
 
     this.body[0].addEventListener('drop', function(e){alert('dropped');});
 
@@ -80,6 +113,7 @@ iQ.prototype.bindEvents = function()
 
 iQ.prototype.setOptions = function (oOptions) {
 
+    this.body = $('body');
 
     //TODO: Do we need to rely on jQuery?
     this.o = $.extend(
@@ -747,28 +781,46 @@ iQ.prototype.date = function(dateQueryString)
 {   
 
     justDateQueryString = dateQueryString.replace(/[<>=]/,'');
-    pointRegEx = /(\d{4})-?(\d{2})?-?(\d{2})/;
-/*
-dr.exec('2012')
-    ["2012", "2012", undefined, undefined]
-dr.exec('2012-')
-    ["2012-", "2012", undefined, undefined]
-dr.exec('2012-05')
-    ["2012-05", "2012", "05", undefined]
-dr.exec('2012-05-')
-    ["2012-05-", "2012", "05", undefined]
-dr.exec('2012-05-08')
-    ["2012-05-08", "2012", "05", "08"]
+    pointRegEx = /(\d{4})-?(\d{2})?-?(\d{2})?/g;
+    dateArray = pointRegEx.exec(justDateQueryString);
 
-*/
-    spanRegEx = /(\d)/;
+    /*
+    dr.exec('2012')
+        ["2012", "2012", undefined, undefined]
+    dr.exec('2012-')
+        ["2012-", "2012", undefined, undefined]
+    dr.exec('2012-05')
+        ["2012-05", "2012", "05", undefined]
+    dr.exec('2012-05-')
+        ["2012-05-", "2012", "05", undefined]
+    dr.exec('2012-05-08')
+        ["2012-05-08", "2012", "05", "08"]
 
+    */
+
+    spanRegEx = /P(\d*)Y(\d*)M(\d*)D/;
+
+    y = parseFloat(dateArray[1]);
+    m = parseFloat(dateArray[2])-1;
+    d = parseFloat(dateArray[3]);
+
+    //TODO: Support specificity, so if they say >2009, they mean any date in 2010, 2011, etc. (i.e. gte new Date(2010,0,1)) 
+    //If they say = 2009, they mean any date in 2009 (i.e. gte new Date(2009,0,1) and lt new Date(2010,0,1))
+
+    y=y?y:0; //
+    m=m?m:0; // First month; 0-index
+    d=d?d:1; // First of a month
+
+    this.queryObject = new Date(y, m, d);
+
+
+    return this.queryObject;
 
     var pointQueryOptions = 
     {
         '>': this.pointGreaterThan,
-        '<': this.pointLessThan,
-        '=': this.pointEqualTo
+        '<': this.pointLessThan
+        //,'=': this.pointEqualTo
     }
 
 
@@ -794,6 +846,28 @@ iQ.prototype.getValueList= function()
 
 }
 
+iQ.prototype.values = function()
+{
+
+    var values =[],
+    numberValues =[];
+    values = this.get().toArray().map($.proxy(this.fact.scale, this));
+
+
+
+    numberValues = values.filter(function(v,i,a){
+
+        return (!isNaN(v) && v!==undefined && v!==null);
+    });
+
+    return numberValues;
+
+
+}
+
+
+iQ.prototype.value = iQ.prototype.values;
+
 iQ.prototype.get = function()
 {
     return this.jResultSet;
@@ -810,11 +884,21 @@ iQ.prototype.color = function(color)
 iQ.prototype.elementContains = function(element)
 {
 
-    return $(element).attr('name').toLowerCase().indexOf(this.queryString.toLowerCase())>-1;
+    return $(element).attr('name').toLowerCase().indexOf(this.queryObject.toLowerCase())>-1;
 
 
 
 }
+
+
+iQ.prototype.elementIs = function(element)
+
+{
+  
+    return $(element).attr('name').split(':')[1].toLowerCase()==this.queryObject.toLowerCase();
+
+}
+
 iQ.prototype.prefixIs = function(element)
 {
 
@@ -823,7 +907,7 @@ iQ.prototype.prefixIs = function(element)
     //But if they do not have prefixes... TODO: Decide how to treat. For now, exclude them.
 
 
-    return $(element).attr('name').split(':')[0]==this.queryString;
+    return $(element).attr('name').split(':')[0]==this.queryObject;
 
 }
 
@@ -834,7 +918,9 @@ iQ.prototype.element = function (elementQueryString) {
         elementQueryStringParts = elementQueryString.split(':');
         prefix = elementQueryStringParts[0];
         elementQueryString= elementQueryStringParts[1];
+        this.queryObject = prefix;
         this.filterFunc = this.prefixIs
+        this.result();
     }
 
     queryOptions = {
@@ -843,11 +929,21 @@ iQ.prototype.element = function (elementQueryString) {
         '$' : this.elementEndsWith
     }
 
-    var firstChar = elementQueryString.slice(0,1);
-    this.filterFunc= queryOptions[firstChar];
-    this.queryString = elementQueryString.slice(1);
+    if (elementQueryString=='')
+    {
+        return this;
+    }
+    else
+    {
+        
+        var firstChar = elementQueryString.slice(0,1);
+        this.filterFunc= queryOptions[firstChar] || this.elementIs;
+        this.queryObject = elementQueryString.replace(/[\*\^\$]/g, '');
 
-    return this.result();
+
+        
+        return this.result();
+    }
     
 }
 
@@ -1194,18 +1290,41 @@ iQ.prototype.conceptInfoHtml = function(jTag)
 
 }
 
-iQ.prototype.value = {
+//Not using iQ.prototype.value because that is an alias for values()
+iQ.prototype.fact = {
 
-    scaleValue : function(sValue, sScale)
+    transform : function(sValue, sTransformation)
     {
+        //TODO: Transform properly
 
+    },
+
+    mapScale : function(i, jTag)
+    {
+        return this.fact.scale(jTag);
+    },
+
+    scale : function(jTag)
+    {
+        jTag = $(jTag);
+        sValue = jTag.text(), 
+        sScale = jTag.attr('scale') || '0';
+
+        if (sValue.match(/[A-Za-z]/g))
+        {
+
+            //A text block
+            //TODO: Check the datatype of the element?
+            //Or check if it has a transform attribute?
+            return NaN;
+        }
 
         nScaledValue = parseFloat(sValue.replace(/,/g, ''));
 
         if (isNaN(nScaledValue))
         {
 
-            return sValue;
+            return NaN;
         }
 
         nScale = parseInt(sScale);
@@ -1218,7 +1337,7 @@ iQ.prototype.value = {
 iQ.prototype.valueInfoHtml = function(jTag)
 {
 
-    return this.createSticker(this.value.scaleValue(jTag.text(), jTag.attr('scale') || '0'));
+    return this.createSticker(this.fact.scale(jTag));
 }
 
 iQ.prototype.categoryInfoHtml = function(jTag)
@@ -1438,19 +1557,53 @@ $.proxy(this.getUnitRef, this));
 
 };
 
-iQ.prototype.makeFilterStats = function(){
-
-    this.filterStats = $('<div></div>').attr('id', 'filterStats').append($('<table></table>').prepend($('<thead></thead>'), $('<tbody></tbody>'))).appendTo('html');
-
+iQ.prototype.average = function()
+{
+    var sum=0;
+    var count =0;
+    this.values().forEach(function(v,i,a){
+        sum+=v;
+        count++;
+    })
+    return sum/count;
 }
 
-iQ.prototype.console = {
+iQ.prototype.makeFilterStats = function(){
 
+    if (!this.filterStats)
+    {
+        this.filterStats = $('#filterStats');
+
+    }
+
+    if(this.filterStats.length==0)
+    {
+        this.filterStats = $('<div></div>').attr('id', 'filterStats').append($('<table></table>').prepend($('<thead></thead>'), $('<tbody></tbody>'))).appendTo('html');
+    }
+}
+
+iQ.prototype.makeConsole = function(){
+    /*
     makeConsole: function()
     {
+    */
 
-        $('<div></div>').attr('id', 'iQconsole').appendTo('html');
+            if (!this.iQconsole)
+            {
+                this.iQconsole = $('#iQconsole');
+
+            }
+
+            if ($('#iQconsole').length==0)
+            {
+
+                this.body.on('iQ_filterStats',  $.proxy(this.showFilterStats, this));
+                this.iQconsole = $('<div></div>').attr('id', 'iQconsole').appendTo('html');
+            }
+
+    /*
     }
+    */
 }
 
   $(document).ready(function(){
