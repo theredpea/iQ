@@ -2,7 +2,8 @@
 iQ = function(oOptions){
 
     this.setOptions(oOptions);
-    this.processHeader();
+    //Put these things in an iQ namespace so other iQs can get them?
+    this._processHeader();
     this.getElements();
     this.makeConsole(); // was this.console.makeConsole();
     this.makeFilterStats();
@@ -156,12 +157,71 @@ iQ.prototype.or = function()
 }
 
 
+iQ.prototype._measureIt = function(func, callIt, timeResults)
+{
+    timeResults = timeResults || [];
+    var startDate = new Date();
+    func();
+    var endDate = new Date();
+    var timing = (endDate-startDate);
+
+    timeResults.push(timing);
+    //console.log(callIt + ' took ' + timing + ' ms');
+
+};
 
 iQ.prototype.getElements = function ()
 {
+    //Copy iX
     lPreQualElements = this.iX.slice(0);
     sPreQualElements = lPreQualElements.join(',');
-    jPreQualElements = $(sPreQualElements);
+
+    jQueryResults = [];
+    arrayResults = [];
+    stringResults = [];
+    convertResults = [];
+
+    var jPreQualElements;
+    for (var i=0;  i<100; i++)
+    {
+
+    this._measureIt(function() { jPreQualElements = $(sPreQualElements); }, 'Using jQuery', jQueryResults);
+    //this._measureIt(function() { jPreQualElements = document.querySelectorAll(lPreQualElements); }, 'Using document.querySelectorAll with array of names', arrayResults);
+    this._measureIt(function() { jPreQualElements = document.querySelectorAll(sPreQualElements); }, 'Using document.querySelectorAll, array of names joined with comma', stringResults);
+    this._measureIt(function() {  jPreQualElements = $(jPreQualElements);   }, 'Converting NodeList to jQuery object', convertResults);
+    //console.log(jPreQualElements.constructor);
+    //console.log(jPreQualElements.constructor);
+    }
+
+    
+    function sum(a) {
+        var s=0;
+        for (var j=0; j<a.length; j++)
+        {
+            s+=a[j];
+        }
+        return s;
+    }
+
+    function divide(a, b)
+    {
+        var c=[];
+        for (var j=0; j<a.length; j++)
+        {
+            c.push(a[j]/b[j]);
+        }
+        return c;
+    }
+    //arraySum = sum(arrayResults);
+    stringSum = sum(stringResults);
+    jQuerySum = sum(jQueryResults);
+    fractionResults = divide(convertResults, stringResults);
+    fractionSum = sum(fractionResults);
+
+    console.log('jQuery average ' + jQuerySum/jQueryResults.length);
+    //console.log('fraction average ' + fractionSum/fractionResults.length);
+    //console.log('array average ' + arraySum/arrayResults.length);///arrayResults.length);
+    console.log('string average ' + stringSum/stringResults.length);///stringResults.length);
 
     this.jAllSet = jPreQualElements.slice(0);
     this.jResultSet = jPreQualElements.slice(0);
@@ -497,6 +557,19 @@ iQ.prototype._elementSortDoc = function(oSort)
     }, this);
 
 }
+
+iQ.prototype._isiq = function(o)
+{
+    return o.constructor == this.constructor;
+};
+
+iQ.prototype.add = function(iQobject)
+{
+
+    if (!this._isiq(iQobject))
+        return 
+};
+
 iQ.prototype.element = function (oElementOptions) {
 
     //TODO: Need to express "not" in string syntax
@@ -1571,23 +1644,20 @@ $('<table>')
 	).appendTo($(this.o.target));
 };
 
+iQ.prototype._$
 
 
-  iQ.prototype.processHeader = function()
-  {
+iQ.prototype._processHeader = function()
+{
   	
+    this.$header = $('ix\\:header');
 
-
-
-  	$('ix\\:header').find('xbrli\\:context').each(
+  	this.$header.find('xbrli\\:context').each(
   		$.proxy(
   		this.getContextRef, this));
 
-  	$('ix\\:header').find('xbrli\\:unit').each(
-$.proxy(this.getUnitRef, this));
-
-
-
+  	this.$header.find('xbrli\\:unit').each(
+            $.proxy(this.getUnitRef, this));
 
 
 };
