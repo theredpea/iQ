@@ -5,6 +5,7 @@ iQ = function(oOptions){
     //Put these things in an iQ namespace so other iQs can get them?
     this._processHeader();
     this.getElements();
+    
     this.makeConsole(); // was this.console.makeConsole();
     this.makeFilterStats();
 	//this.initiXbrl();
@@ -166,62 +167,19 @@ iQ.prototype._measureIt = function(func, callIt, timeResults)
     var timing = (endDate-startDate);
 
     timeResults.push(timing);
-    //console.log(callIt + ' took ' + timing + ' ms');
+    console.log(callIt + ' took ' + timing + ' ms');
 
 };
 
 iQ.prototype.getElements = function ()
 {
     //Copy iX
-    lPreQualElements = this.iX.slice(0);
-    sPreQualElements = lPreQualElements.join(',');
+    var lPreQualElements = this.iX.slice(0),
+        sPreQualElements = lPreQualElements.join(','),
+        nPreQualElements = iQ.iXElements || document.querySelectorAll(lPreQualElements);
 
-    jQueryResults = [];
-    arrayResults = [];
-    stringResults = [];
-    convertResults = [];
-
-    var jPreQualElements;
-    for (var i=0;  i<100; i++)
-    {
-
-    this._measureIt(function() { jPreQualElements = $(sPreQualElements); }, 'Using jQuery', jQueryResults);
-    //this._measureIt(function() { jPreQualElements = document.querySelectorAll(lPreQualElements); }, 'Using document.querySelectorAll with array of names', arrayResults);
-    this._measureIt(function() { jPreQualElements = document.querySelectorAll(sPreQualElements); }, 'Using document.querySelectorAll, array of names joined with comma', stringResults);
-    this._measureIt(function() {  jPreQualElements = $(jPreQualElements);   }, 'Converting NodeList to jQuery object', convertResults);
-    //console.log(jPreQualElements.constructor);
-    //console.log(jPreQualElements.constructor);
-    }
-
-    
-    function sum(a) {
-        var s=0;
-        for (var j=0; j<a.length; j++)
-        {
-            s+=a[j];
-        }
-        return s;
-    }
-
-    function divide(a, b)
-    {
-        var c=[];
-        for (var j=0; j<a.length; j++)
-        {
-            c.push(a[j]/b[j]);
-        }
-        return c;
-    }
-    //arraySum = sum(arrayResults);
-    stringSum = sum(stringResults);
-    jQuerySum = sum(jQueryResults);
-    fractionResults = divide(convertResults, stringResults);
-    fractionSum = sum(fractionResults);
-
-    console.log('jQuery average ' + jQuerySum/jQueryResults.length);
-    //console.log('fraction average ' + fractionSum/fractionResults.length);
-    //console.log('array average ' + arraySum/arrayResults.length);///arrayResults.length);
-    console.log('string average ' + stringSum/stringResults.length);///stringResults.length);
+    iQ.iXElements = nPreQualElements;
+    jPreQualElements = $(nPreQualElements);
 
     this.jAllSet = jPreQualElements.slice(0);
     this.jResultSet = jPreQualElements.slice(0);
@@ -229,28 +187,36 @@ iQ.prototype.getElements = function ()
     this.jResultSetTemp = $();
     this.jExcludeSetTemp = $();
     this.history={};
-//Represents inter logic, not intra logic
+    //Represents inter logic, not intra logic
 	this.logic = 'and';
 
     
         this.jResultSet.each(
-            $.proxy(this.getResults, this));
+            $.proxy(this._inflateResults, this));
     
 }
 
-iQ.prototype.inflate = function(oResult, jResult, options)
+iQ.prototype._inflate = function(oResult, jResult, options)
 {
 
-    options = $.extend({bPopover:true}, options);
+    options = $.extend({bPopover:false}, options);
     if (jResult===undefined)
     { return undefined;
     }
 
     inflateFunc = function(propName, propValue){
-        jResult.data(propName, propValue);
+        //TODO: A solution for handling data-axis-us-gaap_StatementEquityComponents, which would become very funny-looking
+        //TODO: A solution for lowercasing? See inflateResults
+        propName = propName.replace(/([a-z])([A-Z])/g, function(match, first, second) { return first + '-' + second.toLowerCase(); });//$1-$2');
+
+        if (propValue || (typeof(propValue) == typeof({}) &&  Object.keys(propValue).length==0))
+        {
+            jResult.data(propName, propValue);
+            jResult.attr('data-'+propName, propValue);
+        }
         if (options.bPopover)
         {
-            /*
+            
             jResult.popover(
                 {
                     html:true,
@@ -259,17 +225,18 @@ iQ.prototype.inflate = function(oResult, jResult, options)
                     placement:'top'
                 }
             );
-            */
+            
         }
     };
 
     //Put each 
     $.each(oResult, $.proxy(inflateFunc, this));
-    //And cram the whole object there for reference.
-    jResult.data('result', oResult);
+    //And cram the whole object there for reference? Excessive
+    //jResult.data('result', oResult);
 }
 
-iQ.prototype.getResults = function (index, result)
+
+iQ.prototype._inflateResults = function (index, result)
 {
     var jResult = $(result),
     sContextId = jResult.attr('contextref') || 'none',
@@ -303,26 +270,43 @@ iQ.prototype.getResults = function (index, result)
     if ($.isEmptyObject(cSegment)) {
         cSegment = '';
     }
+    //Consider aligning more closely with the properties described here (or on whichever ix: element allows the most )
+    //http://www.xbrl.org/Specification/inlineXBRL-part1/PWD-2013-02-13/inlineXBRL-part1-PWD-2013-02-13.html#sec-nonFractions
+    var name =jResult.attr('name'),
+        oResult = {            //this.getxObj(
+            'name'              : name.toLowerCase(),           //For case-insensitive matches; the default (we always lowercase the searchstring passed by user)
+            'conceptName'       : name,
+            'localName'         : name.split(':')[1],
+            'prefix'            : name.split(':')[0],
+        //   'periodType'        : Tax.periodType(name),        //Should be a constraining facet; but can asset indirectly? Ensuring startDate, endDate and instant are all equal?
+        //   'balanceType'        : Tax.balanceType(name),
+            'contextRef'        : sContextId,
+            'startDate'         : cPeriod.startDate,
+            'endDate'           : cPeriod.endDate,
+            'instant'           : cPeriod.instant,
+            'dimensions'        : cSegment,
+            'entity'            : cEntity.identifier,
+            'unitRef'           : sUnitId,
+            'measure'           : uRef.measure,
+            'numerator'         : uRef.numerator,
+            'denominator'       : uRef.denominator,
+            'ixType'            : jResult[0].nodeName
+        },
+        oDimensions={};
 
-    oResult = {            //this.getxObj(
-        'name': jResult.attr('name'),
-        'contextRef': sContextId,
-        'startDate'     : cPeriod.startDate,
-        'endDate'       : cPeriod.endDate,
-        'instant'       : cPeriod.instant,
-        'dimensions': cSegment,
-        'entity': cEntity.identifier,
-        'unitRef': sUnitId,
-        'measure': uRef.measure,
-        'numerator': uRef.numerator,
-        'denominator': uRef.denominator,
-        'ixType'        : jResult[0].nodeName
-    };
+    $.each(cSegment, function(axis, member) { oDimensions['axis-'+axis.replace(':','_')] = member; });
+    
+
+    oResult = $.extend(oResult, oDimensions);
+
+
+
+    //Data attributes for each axis
 
 
     if (this.o.inflate)
     {
-        this.inflate(oResult, jResult);
+        this._inflate(oResult, jResult);
 
     }
         this.oResultSet.push(oResult);
@@ -1179,10 +1163,23 @@ iQ.prototype.getContextRef = function(index, domContext){
         jContext = $(domContext);
 
         oContext = {};
+        //Keys:
+            //@ entity
+                //@identifier   : {string}
+                //@ scheme      : {string}
+            //@ period      
+                //@ startDate   : {date}
+                //@ endDate     : {date}
+                //@ instant     : {date}
+            //@ segment
+                //@ axis {string} : member {string} 
+
         oContext.entity = {};
+        //Keyed on ['startDate', 'endDate', 'instant']
         oContext.period = {};
+        //Keyed on axis name
         oContext.segment = {};
-        oContext.results = []; //In inflate, this happens
+        oContext.results = []; //In inflate, this happens. Why? Just inject it back into the object.
         oContext.count = 0;
         //oContext.scenario = {};
 
@@ -1192,16 +1189,20 @@ iQ.prototype.getContextRef = function(index, domContext){
         jEntityIdentifier = jContext.find('xbrli\\:entity>xbrli\\:identifier');
         oContext.entity.identifier = jEntityIdentifier.text();
         oContext.entity.scheme =	 jEntityIdentifier.attr('scheme'); 
-
+        
+        //===============================Time
         jPeriod = jContext.find('xbrli\\:period');
         lPeriods = ['startDate', 'endDate', 'instant']
         for (i in lPeriods)
         {
             sEl = lPeriods[i];
             jEl = jPeriod.find('xbrli\\:' + sEl);
-            oContext.period[sEl] =  jEl.length>0? this.dateFromIso(jEl.text()): undefined; // Using undefined vs '' so I can do an or.
+            oContext.period[sEl] =  jEl.length>0? this.dateFromIso(jEl.text()): undefined; // Using undefined vs '' so I can do an or ('||').
 				
         }
+
+
+        //===============================Other Axes
         jSegment = jContext.find('xbrli\\:segment');
         jSegment.find('xbrldi\\:explicitmember').each(
             function(index, domExplicitMember)
@@ -1213,6 +1214,7 @@ iQ.prototype.getContextRef = function(index, domContext){
             })
 
         this.contextRef[sContextId] = oContext;
+
 
 
     }
@@ -1386,6 +1388,150 @@ iQ.prototype.conceptFilterText = function(concept)
 
 }
 
+
+//
+//======================MATH===============================
+//
+
+
+
+//An alignment function corresponds to each of these
+//The alignment tests for equality
+iQ.equal = function(a,b, property) { return a.data(property) == b.data(property); };
+
+
+//Corresponding to the rows in these tables
+//http://www.xbrl.org/WGN/XBRL-formula-overview/PWD-2011-12-21/example15va-implicit-filtering-1.png
+//Should also correspond with the filtering functions available on an iQ object
+iQ.aspects = [ 
+    {
+        aspect:'element',
+        synonyms:['concept', 'tag'],
+        aligned: function(a,b) { return iQ.equal(a,b,'name'); }
+    },
+    {
+        aspect:'axes',
+        synonyms:['concept'],
+        aligned: function(a,b) { return iQ.equal(a,b,'name'); }
+    },
+]
+/*
+'period',
+'durationLength',
+'duration',
+'startDate',
+'endDate',
+'member',
+'members',
+
+''
+*/
+
+
+// Returns true if the two iXBRL values are "aligned"
+// "Alignment" is like implicit filtering:
+// http://www.xbrl.org/WGN/XBRL-formula-overview/PWD-2011-12-21/XBRL-formula-overview-WGN-PWD-2011-12-21.html#section-implicit-filtering
+// iQ uses the idea of 'covered' and 'uncovered'
+// @method alignment
+//
+// @param {iQ object}
+// @param {iQ object}
+// @return {bool} true if the two iXBRL values are "aligned". Uses the first parameter's uncovered aspects
+// @static
+iQ.alignment = function(a, b)
+{
+
+};
+
+// Produces a x b
+// @method _cartesianProduct
+//
+// @param {iQ object} first object, typically the "left operand" in an operation
+// @param {iQ object} second object, typically the "right operand"
+// @return {multidimensional array} the first dimension represents all the first objects, the second dimension the second objects
+// @NOTE: At first it was just going to return a multidimensional array
+// But then I get concerned that it's already looping through these dimensions testing for alignment, so it should operate while it's at it?
+// @static
+iQ._cartesianProduct = function(a, b)
+{
+
+    a.get().each(function(firstIndex, firstDOMObject){
+        b.get().each(function(secondIndex, secondDOMObject){
+
+
+
+        });
+    }); //A for loop would also enumerate its builtin properties and methods -- no good
+
+
+};
+
+
+iQ._parseValue = function(a)
+{
+
+};
+
+
+
+iQ._produceValueFunc = function(valueFunc)
+{
+    return function(a,b,c)
+    {
+
+        var newValue = valueFunc(iQ._parseValue(a), iQ._parseValue(b));
+
+        return c
+                .text(newValue)
+                .data('value', newValue)
+                .attr('data-value', newValue);
+
+    };
+};
+
+
+//TODO: Don't just provide an operateFunc, which will produce something
+    //And it only gets to act on their values
+//Provide a produceFunc, which will act on the whole jQuery objects (or iQ objects?), to produce a new jQuery/iQ object
+//Provide a whereFunc, which will test for alignment -- in addition to the implicit filtering.
+//For example, to test that the duration begins one day after the startingBalance
+//And the end begins one day after the endingBalance
+
+iQ._operate = function(operateFunc)
+{
+    return iQ._cartesianProduct(a,b,iQ._produceValueFunc(operateFunc));
+};
+
+
+// Produces an iQ object which aligns and sums the params
+// @method sum
+//
+// @param {iQ object} iQ object which is left operand
+// @param {iQ object} iQ object which is right operand
+// @return {iQ object} iQ object which is summed
+// @static
+
+iQ._add = function(a, b)
+{
+    return iQ._operate(function(a,b){ return a+b; });
+};
+
+
+// Produces an iQ object which aligns the param to the 'this' iQ object
+// @method sum
+//
+// @param {iQ object} iQ object which becomes right operand
+// @return {iQ object} iQ object which is summed
+iQ.prototype.addTo = function(b)
+{
+    return iQ._add(this, b);
+};
+
+
+//
+//======================UI==================================
+//
+
 iQ.prototype.conceptInfoHtml = function(jTag)
 {
     sTagName =jTag.attr('name') ||  'No name';
@@ -1510,16 +1656,31 @@ Link:
  iQ.process = function(){};
 
 
+//For consistency
+//iQ will use this terminology
+//In reference to ix:nonFraction where ix is (see map below)
+
+//ix..............................................................................prefix
+//nonFraction.....................................................................unqualifiedName or localName or unqualified name http://www.w3.org/TR/1999/REC-xml-names-19990114/#NT-NCName
+//ix:nonFraction..................................................................name or qualifiedName or qualified name  * Notice how 'name' refers to qualified name! And notice how qualified  http://www.w3.org/TR/xmlschema-2/#QName
+//http://www.xbrl.org/2008/inlineXBRL.............................................namespace
+//http://www.xbrl.org/2008/inlineXBRL:nonFraction.................................namespaceQualifiedName or namespace-qualified name....after mappping lexical prefix to value anyUri http://www.w3.org/TR/xmlschema-2/#anyURI
+//ix_nonFraction..................................................................underscoreName or underscore-qualified name
+
+//TODO: Reconcile with
+//NCName..........http://www.w3.org/TR/xmlschema-2/#NCName
+//QName...........http://www.w3.org/TR/xmlschema-2/#QName.........................aligned with qualified name
+
 //http://www.xbrl.org/Specification/inlineXBRL-part1/REC-2010-04-20/inlineXBRL-part1-REC-2010-04-20.html#sec-prefixes
  iQ.nsMap =  {
-		'ix':		'http://www.xbrl.org/2008/inlineXBRL',
-		'ixt':	'http://www.xbrl.org/inlineXBRL/transformation/2010-04-20',
-		'link':	'http://www.xbrl.org/2003/linkbase',
-		'xbrli':	'http://www.xbrl.org/2003/instance',
-		'xl':		'http://www.xbrl.org/2003/XLink',
-		'xlink':	'http://www.w3.org/1999/xlink',
-		'xml':	'http://www.w3.org/XML/1998/namespace',
-		'xsi':	'http://www.w3.org/2001/XMLSchema-instance'
+		'ix'          :		'http://www.xbrl.org/2008/inlineXBRL',
+		'ixt'         :	'http://www.xbrl.org/inlineXBRL/transformation/2010-04-20',
+		'link'        :	'http://www.xbrl.org/2003/linkbase',
+		'xbrli'       :	'http://www.xbrl.org/2003/instance',
+		'xl'          :		'http://www.xbrl.org/2003/XLink',
+		'xlink'       :	'http://www.w3.org/1999/xlink',
+		'xml'         :	'http://www.w3.org/XML/1998/namespace',
+		'xsi'         :	'http://www.w3.org/2001/XMLSchema-instance'
  };
 
 
@@ -1553,8 +1714,8 @@ Note:
      'footnote'
  ];
 
- iQ.prototype.valueEl = (function () {
-     results = [];
+ iQ.prototype.valueEl = function () {
+     var results = [];
      for (i in iQ.el) {
              if (iQ.nonValue.indexOf(iQ.el[i]) == -1) {
                  results.push(iQ.el[i]);
@@ -1562,7 +1723,7 @@ Note:
              
         }
      return results;
- })();
+ }();
 
 /*
 Why:
@@ -1644,7 +1805,7 @@ $('<table>')
 	).appendTo($(this.o.target));
 };
 
-iQ.prototype._$
+
 
 
 iQ.prototype._processHeader = function()
