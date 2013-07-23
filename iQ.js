@@ -383,17 +383,14 @@ iQ.prototype._elementFilter = function (oElement) {
         oElement =
             {
                 any: this._stringFilter(oElement),
-		sortBy : 'name'
+                sortBy : 'name'
             };
     }
 
     if (typeof (oElement) == typeof (new Object())) {
         var lElementProperties = Object.keys(oElement);
 
-        if (lElementProperties.indexOf('any') > -1) {
-
-            anyStringFilter = lElementProperties.any;
-		//For example, 
+        //For example, 
 /*
 
                     {
@@ -403,7 +400,12 @@ iQ.prototype._elementFilter = function (oElement) {
                     }
 */
 
-            elementProperties = Object.keys(this._elementFilterDoc())
+        //Any trumps everything else
+        var elementProperties = Object.keys(this._elementFilterDoc());
+
+        if (lElementProperties.indexOf('any') > -1) {
+            delete oElement.all; //"any" trumps "all"; should not matter, they are mutually exclusive because of if/else
+            anyStringFilter = lElementProperties.any;
             elementProperties.foreach(function (element, index, array) {
                 if (element !== 'any' && element !== 'all') { //So like 'doc', 'ref', 'label', 'name'
                     //Q: Do I need to make a copy?
@@ -428,10 +430,8 @@ iQ.prototype._elementFilter = function (oElement) {
 
         else if (lElementProperties.indexOf('all') > -1) {
 
+            allStringFilter = this._stringFilter(lElementProperties['all']); //lElementProperties.all;
 
-            allStringFilter = lElementProperties.all;
-
-            elementProperties = Object.keys(this._elementFilterDoc())
             elementProperties.foreach(function (element, index, array) {
                 if (element !== 'any' && element !== 'all') {
                     filter[element] = allStringFilter; //
@@ -584,18 +584,15 @@ iQ.prototype.element = function (oElementOptions) {
         andDelimiter = '>';
 
         oElementOptions = stringOptions
-                                    .replace('||',  orDelimiter)
-                                    .replace('|',   orDelimiter)
-
-                                    .replace('&',   andDelimiter)
-                                    .replace('&&',  andDelimiter);
+                                    .replace(/\|+/g,  orDelimiter)
+                                    .replace(/\&+/g,  andDelimiter);
 
         var orDelimited = stringOptions.indexOf(orDelimiter)>-1;
         var andDelimited = stringOptions.indexOf(andDelimiter)>-1;
 
         if (orDelimited && andDelimited)
         {
-            throw 'iQ cannot handle both commas and greater-than signs for now.';
+            throw 'iQ.element cannot do both "and" and "or" logic';
         }
 
         //For example, iQ.element('assets, liabilities'), they want both.
@@ -625,7 +622,7 @@ iQ.prototype.element = function (oElementOptions) {
 	if(listOptions==[] || listOptions.length<0)
 	{
 
-	throw 'List options is empty';
+	   throw 'iQ.element was called with an empty list';
 	}
     else 
     {
@@ -645,7 +642,7 @@ iQ.prototype.element = function (oElementOptions) {
         
         if (listOptions.length==0)
         {
-            throw 'After striping whitespace, iQ cannot find any strings. Empty filter?';
+            throw 'iQ.element stripped whitespace which left an empty list';
         }
         if (listOptions.length>1)
         {
@@ -666,26 +663,31 @@ iQ.prototype.element = function (oElementOptions) {
             //But I work on string syntax before object syntax
             searchString = listOptions.pop(); //Or listOptions[0]?
 
-		filters = this._elementFilter(searchString);
+            filters = this._elementFilter(searchString);
 
         }
     }
 
 	if(isObject)
 	{
-		filters = oElement;
+        throw 'iQ.element does not support object filters yet';
+		//filters = oElementOptions;
 	}
         
 
         var jFilterResultSet, jEachResultSet;
 
 
-
+        //What is this?!
+        /*
         iQinstruction = this.history[startTime].iQinstruction = listOptions.map($.proxy(function (value) {
             
         }, this));
+*/
 	
 
+    //Could be multiple filters, 
+    //Like name contains, etc etc
 	for(elementProperty in filters)
 	{
 		elementPropertyValueFunction = this.element['get_'+elementProperty];
@@ -708,7 +710,7 @@ iQ.prototype.element = function (oElementOptions) {
     
 
     if (isRegEx) {
-        console.log('regex');
+        throw 'iQ.element does not support RegExes yet';
     }
     if (typeof oElementOptions.constructor == ({}).constructor) {
 
