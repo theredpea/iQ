@@ -5,27 +5,7 @@ iQ = function(oOptions){
 }
 
 
- iQ.elements = ['nonFraction'
-,'nonNumeric'
-,'denominator'
-,'exclude'
-,'footnote'
-,'fraction'
-,'header'
-,'hidden'
-,'numerator'
-,'references'
-,'resources'
-, 'tuple'];
-
-iQ.prefixIt = function(prefix, escaped){
-    if (escaped===undefined) escaped=true;
-    var joiner = escaped ? '\\:' : ':';
-    return function(element, index, array) {
-        return prefix+joiner+element;
-    };
-};
-
+///non-value Elements
  iQ.nvElements = [
      'header',
      'exclude',
@@ -36,13 +16,50 @@ iQ.prefixIt = function(prefix, escaped){
  ];
 
 
- iQ.prototype.index = function () {
+ iQ.elements = [
+ 'nonFraction',
+ 'nonNumeric',
+ 'denominator',
+ 'exclude',
+ 'footnote',
+ 'fraction',
+ 'header',
+ 'hidden',
+ 'numerator',
+ 'references',
+ 'resources', 
+ 'tuple'];
 
 
-        var allElements = document.querySelectorAll(iQ.elements.map(iQ.prefixIt('ix')),
-            length = allElements.length;
+///A map-ready function-creator
+///Given first-level attributes prefix and escape
+///Returns function that appends element
+iQ.prefixThem = function(prefix, escaped){
+    var joiner = ':';
+    if (typeof(escaped)==='string') joiner= escaped;
+    else if (escaped || escaped===undefined) joiner = '\\:';
+    return function(element, index, array) {
+        return prefix+joiner+element;
+    };
+};
 
-        for ()
+iQ.prefixIt = function(it, prefix, escaped) {
+    return iQ.prefixThem(prefix, escaped)(it);
+}
+
+
+ iQ._index = function () {
+
+
+        var allElements = document
+                            .querySelectorAll(
+                                    iQ.elements.concat(   
+                                        iQ.elements.map(
+                                            iQ.prefixIt('ix')))),
+            
+        iQ._values = iQ._mapNodes (allElements
+
+
         //this.index.elements;
 
  };
@@ -81,69 +98,90 @@ iQ.att =[
 
 
 
-  iQ.prototype.iX = function(){
-  	u = iQ.prototype.valueEl.slice(0);
-  	q=[];
-  	for (i in u)
-		{
-			q.push('ix\\:' + u[i]);
-		}
-  	return q;
-  }();
-
-
-  iQ.prototype.alliX = function()
-  {
-
-  	//jPreQualElements.css('background-color', 'yellow');
-
-  }
 
 
 
-iQ.prototype.addResourceTable= function () {
+///Just aliases
+///Overkill?
+///Probably
+//iQ.q  = document.querySelector;
+//iQ.qa = document.querySelectorAll;
 
-$('<table>')
-.append(
-
-	$('<tr>')
-		.append(
-			$('<th>').text('ContextRef'),
-			$('<th>').text('Context Start'),
-			$('<th>').text('Context End'),
-			$('<th>').text('Context Instant')
-			)
-		,
-	$.map(	this.contextRef, 
-			function(value, key)
-			{ 
-				return $('<tr>').append(
-				$('<td>').text(key),
-				$('<td>').text(value.period.startDate),
-				$('<td>').text(value.period.endDate),
-				$('<td>').text(value.period.instant))
-			}
-		)
-	).appendTo($(this.o.target));
-};
-
-
-
-
-iQ.prototype._processHeader = function()
+iQ._processHeader = function()
 {
   	
-    this.$header = $('ix\\:header');
+    var header      = document
+                        .querySelector(iQ.prefixIt('header', 'ix')),             //Only one header; not "querySelectorAll"
+        contexts    = header
+                        .querySelectorAll(iQ.prefixIt('context', 'xbrli')),
+        units       = header
+                        .querySelectorAll(iQ.prefixIt('unit', 'xbrli'));
 
-  	this.$header.find('xbrli\\:context').each(
-  		$.proxy(
-  		this.getContextRef, this));
-
-  	this.$header.find('xbrli\\:unit').each(
-            $.proxy(this.getUnitRef, this));
-
+        iQ._contexts = iQ._mapNode(contexts, iQ._processContextNodes);
+        iQ._units    = iQ._mapNode(units, iQ._processUnitNodes);   
 
 };
+
+iQ._processContextNodes = function (node, index, nodeList)
+{
+
+};
+
+iQ._processUnitNodes = function(unitNode, index, nodeList)
+{
+
+
+        unitResult = {
+            id              :unitNode.getAttribute('id'), //attributes['id'],
+            measure         :unitNode.querySelector(iQ.prefixIt('measure', 'xbrli')),
+            numerator       :'',
+            denominator     :'',
+            results         :[],           
+            count           :0
+        }
+
+
+
+        jMeasure = jUnit.find('xbrli\\:measure');
+        if (jMeasure.length >0){
+            oUnit.measure = jMeasure.text();
+        }
+        else{
+
+            jDivide = jUnit.find('xbrli\\:divide');
+            //TODO: Support multiplication
+            //jMultiply = jUnit.find('xbrli\\:multiply');
+
+            oUnit.numerator = jDivide.find('xbrli\\:numerator>xbrli\\:measure').text();
+            oUnit.denominator = jDivide.find('xbrli\\:denominator>xbrli\\:measure').text();
+        }
+
+        
+        this.unitRef[sUnitId] = oUnit;
+};
+
+
+
+///Array utilities
+///=========================================
+iQ._eachNode = function(nodeList, eachFunction, results)
+{
+        var length = nodeList.length;
+        results = results || {};
+        results.map = results.map || [];
+
+        for (var i=0, i<length, i++)
+        {
+            results.map.push(eachFunction(nodeList[i], i, nodeList));
+        }
+}
+
+iQ._mapNode = function(nodeList, eachFunction)
+{
+    results = {}
+    iQ._eachNode(nodeList, eachFunction, results);
+    return results.map;
+}
 
 iQ.prototype.average = function()
 {
@@ -197,7 +235,6 @@ iQ.prototype.makeConsole = function(){
   $(document).ready(function(){
 
 
-
-
       q = new iQ();
   });
+

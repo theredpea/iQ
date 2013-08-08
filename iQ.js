@@ -158,16 +158,36 @@ iQ.prototype.or = function()
 }
 
 
-iQ.prototype._measureIt = function(func, callIt, timeResults)
+iQ.prototype._averageIt = function(arrayOfDecimals)
+{
+    var total =0;
+    var count = arrayOfDecimals.length;
+    for(i=0;i<count; i++)
+    {
+        total+= arrayOfDecimals[i];
+    }
+    //console.log('total is ' + total);
+    //console.log('count is ' + count);
+
+    return total/count;
+
+}
+
+iQ.prototype._measureIt = function(func, callIt, howOften, timeResults)
 {
     timeResults = timeResults || [];
-    var startDate = new Date();
-    func();
-    var endDate = new Date();
-    var timing = (endDate-startDate);
+    howOften = howOften || 1;
+    for(i=0;i<howOften; i++)
+    {
+        var startDate = new Date();
+        func();
+        var endDate = new Date();
+        var timing = (endDate-startDate);
 
-    timeResults.push(timing);
-    console.log(callIt + ' took ' + timing + ' ms');
+        timeResults.push(timing);
+        console.log( callIt + ' took ' + timing + ' ms;');
+    }
+    console.log(callIt+  ' averaged ' + this._averageIt(timeResults));
 
 };
 
@@ -177,6 +197,45 @@ iQ.prototype.getElements = function ()
     var lPreQualElements = this.iX.slice(0),
         sPreQualElements = lPreQualElements.join(','),
         nPreQualElements = iQ.iXElements || document.querySelectorAll(lPreQualElements);
+
+    iQnodeList = document.querySelectorAll(sPreQualElements);
+
+    idSelector=[];
+    idSelectorNoHash = [];
+    attrSelector=[];
+    classSelector=[];
+    sameAttrSelector=[];
+
+    for(i=0; i<iQnodeList.length; i++)
+    {
+        var n = iQnodeList[i];
+        var id='iQ_'+i;
+        console.log(n.getAttribute('id'));
+        n.setAttribute('data-id', id);
+        attrSelector.push('[data-id="'+ id+'"]');
+        n.setAttribute('id', 'iQ_'+i);
+        idSelector.push('#'+id);
+        idSelectorNoHash.push(id);
+        n.setAttribute('class','iqresult');//(n.getAttribute('class') ||'')  +id);
+        //classSelector.push(id);
+        n.setAttribute('data-iqresult', 'iqresult');
+        
+
+
+    }
+    sameAttrSelector.push('[data-iqresult]');
+    classSelector.push('iqresult');
+    //console.log(sameAttrSelector);    
+    //console.log(idSelector);
+    //console.log(classSelector);
+    //console.log(attrSelector);
+    this._measureIt(function(){document.querySelectorAll(idSelector).length;}, 'idSelection', 10);
+    this._measureIt(function(){ var nodeList=idSelectorNoHash.map(function(i) { return document.getElementById(i)}) ; console.log(nodeList.length); }, 'idSelection map document.getElementById', 10);
+    this._measureIt(function(){document.querySelectorAll(attrSelector).length;}, 'attrSelection', 10);
+    this._measureIt(function(){/*console.log(classSelector[0]); console.log(*/document.getElementsByClassName('iqresult').length; }, 'classSelection getElementsByClassName', 10);
+    this._measureIt(function(){/*console.log(classSelector[0]); console.log(*/document.querySelectorAll(classSelector).length; }, 'classSelection querySelectorAll', 10);
+
+    this._measureIt(function(){document.querySelectorAll(sameAttrSelector).length;}, 'sameAttrSelection', 10);
 
     iQ.iXElements = nPreQualElements;
     jPreQualElements = $(nPreQualElements);
