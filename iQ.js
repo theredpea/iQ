@@ -206,6 +206,7 @@ iQ.prototype.getElements = function ()
     classSelector=[];
     sameAttrSelector=[];
 
+/*
     for(i=0; i<iQnodeList.length; i++)
     {
         var n = iQnodeList[i];
@@ -223,21 +224,23 @@ iQ.prototype.getElements = function ()
 
 
     }
+    */
     sameAttrSelector.push('[data-iqresult]');
     classSelector.push('iqresult');
     //console.log(sameAttrSelector);    
     //console.log(idSelector);
     //console.log(classSelector);
     //console.log(attrSelector);
-    
+    /*
     this._measureIt(function(){document.querySelectorAll(idSelector).length;}, 'idSelection', 10);
     this._measureIt(function(){ var nodeList=idSelectorNoHash.map(function(i) { return document.getElementById(i)}) ; console.log(nodeList.length); }, 'idSelection map document.getElementById', 10);
     this._measureIt(function(){document.querySelectorAll(attrSelector).length;}, 'attrSelection', 10);
-    this._measureIt(function(){/*console.log(classSelector[0]); console.log(*/document.getElementsByClassName('iqresult').length; }, 'classSelection getElementsByClassName', 10);
-    this._measureIt(function(){/*console.log(classSelector[0]); console.log(*/document.querySelectorAll(classSelector).length; }, 'classSelection querySelectorAll', 10);
+    this._measureIt(function(){document.getElementsByClassName('iqresult').length; }, 'classSelection getElementsByClassName', 10);
+    this._measureIt(function(){document.querySelectorAll(classSelector).length; }, 'classSelection querySelectorAll', 10);
 
     this._measureIt(function(){document.querySelectorAll(sameAttrSelector).length;}, 'sameAttrSelection', 10);
-
+*/
+    
     iQ.iXElements = nPreQualElements;
     jPreQualElements = $(nPreQualElements);
 

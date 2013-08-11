@@ -1,9 +1,6 @@
 
-iQ = function(oOptions){
 
-    this.index();
-}
-
+iQ = {};
 
 ///non-value Elements
  iQ.nvElements = [
@@ -33,7 +30,7 @@ iQ = function(oOptions){
 
 iQ.prefixIt = function(it, prefix, escOrJoiner) {
     var joiner = ':';
-    if (escOrJoiner instanceof String) joiner= escOrJoiner;
+    if (typeof(escOrJoiner)==='string') joiner= escOrJoiner;
     else if (escOrJoiner || escOrJoiner===undefined) joiner = '\\:';
 
     return prefix+joiner+it;
@@ -56,28 +53,67 @@ iQ.prefixThem = function(prefix, escapedOrJoiner){
 
 iQ.prefixPlusThem = function(prefix, escapedOrJoiner){
     return function(element, index, array) {
-        return iQ.prefixAndNonIt(element, prefix, escapedOrJoiner)
+        return iQ.prefixPlusIt(element, prefix, escapedOrJoiner)
     };
 };
 
 iQ.flatten = function(twoDimArray){
     //http://stackoverflow.com/questions/10865025/merge-flatten-an-array-of-arrays-in-javascript
-    var flattened = [],
+    var flattened = [];
     return flattened.concat.apply(flattened, twoDimArray);
 };
 
- iQ._index = function () {
+iQ._index = function () {
 
-        var allElements = iQ.all(
-                                iQ.flatten(
+        iQ.allElements = iQ.flatten(
                                     iQ.elements.map(            //TODO: Shim for native array map method
                                         iQ.prefixPlusThem('ix')
                                         )
-                                    )
-                                ),
-        iQ._values = iQ._mapNodes (allElements
+                                    );
+                                    
+        var allElements     = iQ.all(iQ.allElements),
+
+            index           = {},
+            indexF          =   function(ixNode, i){
+                                    var iQid        = iQ.prefixIt(i, 'iQ', '_'),
+                                        attrs       = [
+                                            'contextRef',
+                                            'decimals',
+                                            'format',
+                                            'id',
+                                            'name',
+                                            'order',
+                                            'precision',
+                                            'target',
+                                            'tupleRef',
+                                            'scale',
+                                            'sign',
+                                            'unitRef'
+                                        ],
+                                        ixType      = ixNode.nodeName,
+                                        //TODO: Accommodate all attributes, not just nonFraction's? http://www.xbrl.org/Specification/inlineXBRL-part1/PWD-2013-02-13/inlineXBRL-part1-PWD-2013-02-13.html#sec-nonFractions
+                                        //TODO: Accommodate more complex content? 
+                                        valueResult = {
+                                            ixType          :ixType,            
+                                            value           :iQ._text(ixNode),
+                                            index           :i
+                                        };
+
+                                    attrs.each(function(attr){
+                                        valueResult[attr] = iQ._attr(ixNode, attr);
+                                    });
+                                    //TODO: Special processing depending on ixType?
 
 
+                                    //Displace their ID
+                                    if(ixNode.id) ixNode.setAttribute('data-original-id', ixNode.id);
+                                    ixNode.id = iQid;
+                                    index[iQid] = valueResult;
+                                };
+            iQ._eachNodes(allElements, indexF);
+        
+
+            iQ.index = index;
         //this.index.elements;
 
  };
@@ -151,8 +187,6 @@ iQ._xbrli = function(it){
 iQ._processContextNodes = function (contextNode, index, nodeList)
 {
 
-        jContext = $(domContext);
-
         //1) date texts are ISO 8601 
         //2) they are unions of date and dateTIme
         //3) there are rules for inferring time if only a date is provided
@@ -162,8 +196,8 @@ iQ._processContextNodes = function (contextNode, index, nodeList)
         //TODO: Should I do it? Use the right rules. See iQ.dateFromIso
         //Need to accommodate not just dates, but times; and time zones!
 
-        var 
-            identifierNode  = iQ.first(contextNode, iQ.prefixIt('identifier', 'xbrli')),
+         
+        var identifierNode  = iQ.first(contextNode, iQ.prefixIt('identifier', 'xbrli')),
             periodNode      = iQ.first(contextNode, iQ.prefixIt('period', 'xbrli')),
             periodTextF     = function(text) { return iQ._text(iQ.first(periodNode, iQ.prefixIt(text, 'xbrli'))) },
             segmentMaker    = function(s) { return function(memberNode) { s[iQ._attr(memberNode, 'dimension')] = iQ._text(memberNode) }},
@@ -174,46 +208,27 @@ iQ._processContextNodes = function (contextNode, index, nodeList)
             entityObject    = {
                 identifier  :iQ._text(identifierNode),
                 scheme      :iQ._attr(identifierNode)
-            }
+            },
             segmentObject   = {},
-            throwAway       = iQ._mapNodes(iQ.all(periodNode, segmentMaker(segment)),
+            throwAway       = iQ._mapNodes(iQ.all(periodNode, segmentMaker(segment))),
             periodObject    = {
                 startDate       :startDate,
-                startDateDate   :new Date(startDate),   //See above re: method; I don't think IE Date constructors recognize strings
+                startDateDate   :new Date(startDate),   //See above re: method; I don't think IE Date constructors recognize ISO strings
                 endDate         :endDate,
                 endDateDate     :new Date(endDate),
                 instant         :instant,
                 instantDate     :new Date(instant),
             },
 
-            //Should it be subdivided?
-            contextResult = {
+            contextResult   = {
                 id              :contextNode.id,
                 entity          :entityObject,
             //Keyed on ['startDate', 'endDate', 'instant']
                 //transferrence; should I un-nest this?
                 period          :periodObject,
-                
                 segment         :segmentObject,
-            //Keyed on axis name
-                results         :,
-                count           :,
-                index           :index
-
+                index           :index 
             };
-
-        //Keys:
-            //@ entity
-                //@identifier   : {string}
-                //@ scheme      : {string}
-            //@ period      
-                //@ startDate   : {date}
-                //@ endDate     : {date}
-                //@ instant     : {date}
-            //@ segment
-                //@ axis {string} : member {string} 
-
-
         return contextResult;
 
 };
@@ -248,19 +263,19 @@ iQ._processUnitNodes = function(unitNode, index, nodeList)
 
 //DOM utilities
 //===============================
-iQ.all = iQ._qsa;
-
 iQ._qsa = function(queryStringOrNode, queryString)
 {
     return iQ._q(queryStringOrNode, queryString, 'querySelectorAll');
 };
+iQ.all = iQ._qsa;
 
-iQ.first = iQ._qs;
 
 iQ._qs = function(queryStringOrNode, queryString)
 {
     return iQ._q(queryStringOrNode, queryString, 'querySelector');
 };
+
+iQ.first = iQ._qs;
 
 //Would prefer to use this for 
 iQ.named = function(tagNameOrNode, tagName)
@@ -268,21 +283,19 @@ iQ.named = function(tagNameOrNode, tagName)
     return iQ._q(tagNameOrNode, tagName, 'getElementsByTagName');
 };
 
-iQ._q = function(queryMethod, queryStringOrNode, queryString)
+iQ._q = function(queryStringOrNode, queryString, queryMethod)
 {
     var result;
     //if null or undefined
-    if (!queryStringOrNode) 
-    {
+    if (!queryStringOrNode){
         return null;
     }
     //query whole document; 
-    else if (queryStringOrNode instanceof String or queryStringOrNode instanceof Array)
-    {
+    else if (typeof(queryStringOrNode)==='string' || queryStringOrNode instanceof Array){
         return document[queryMethod](queryStringOrNode);
     }
     //first arg is a node; query its children
-    else
+    else{
         return queryStringOrNode[queryMethod](queryString);
     }
 
@@ -301,7 +314,7 @@ iQ._attr = function(node, attr)
 
 ///NodeList utilities
 ///=========================================
-iQ._eachNode = function(nodeList, eachFunction, results)
+iQ._eachNodes = function(nodeList, eachFunction, results)
 {
         /*
         var length = nodeList.length;
@@ -314,14 +327,14 @@ iQ._eachNode = function(nodeList, eachFunction, results)
         }
         */
 
-    [].each.call(nodeList, eachFunction);
+    [].forEach.call(nodeList, eachFunction);
 }
 
 iQ._mapNode = function(nodeList, eachFunction)
 {
     /*
     results = {};
-    iQ._eachNode(nodeList, eachFunction, results);
+    iQ._eachNodes(nodeList, eachFunction, results);
     return results.map;
     */
     [].map.call(nodeList, eachFunction);
@@ -345,47 +358,5 @@ iQ._average = function()
 
 //UI utilities
 //========================
-iQ.prototype.makeFilterStats = function(){
 
-    if (!this.filterStats)
-    {
-        this.filterStats = $('#filterStats');
-
-    }
-
-    if(this.filterStats.length==0)
-    {
-        this.filterStats = $('<div></div>').attr('id', 'filterStats').append($('<table></table>').prepend($('<thead></thead>'), $('<tbody></tbody>'))).appendTo('html');
-    }
-}
-
-iQ.prototype.makeConsole = function(){
-    /*
-    makeConsole: function()
-    {
-    */
-
-            if (!this.iQconsole)
-            {
-                this.iQconsole = $('#iQconsole');
-
-            }
-
-            if ($('#iQconsole').length==0)
-            {
-
-                this.body.on('iQ_filterStats',  $.proxy(this.showFilterStats, this));
-                this.iQconsole = $('<div></div>').attr('id', 'iQconsole').appendTo('html');
-            }
-
-    /*
-    }
-    */
-}
-
-  $(document).ready(function(){
-
-
-      q = new iQ();
-  });
-
+iQ._index();
