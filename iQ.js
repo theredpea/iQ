@@ -229,6 +229,7 @@ iQ.prototype.getElements = function ()
     //console.log(idSelector);
     //console.log(classSelector);
     //console.log(attrSelector);
+    
     this._measureIt(function(){document.querySelectorAll(idSelector).length;}, 'idSelection', 10);
     this._measureIt(function(){ var nodeList=idSelectorNoHash.map(function(i) { return document.getElementById(i)}) ; console.log(nodeList.length); }, 'idSelection map document.getElementById', 10);
     this._measureIt(function(){document.querySelectorAll(attrSelector).length;}, 'attrSelection', 10);
