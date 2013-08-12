@@ -28,6 +28,61 @@ iQ = {};
  'tuple'];
 
 
+iQ._workerResponse = function(event, workerName)
+{
+    //event.data contains an array of values
+    alert('Got results from worker: ' + workerName);
+    iQ.results = iQ.results || {};
+    iQ.results[workerName] = event.data;
+    if (event.data.results instanceof Array)
+    {
+        iQ._eachNodes(iQ
+                        .flatten(event.data.results)
+                        .map(function(id){
+                                    return document.getElementById(id);
+                                }),
+                        function(n){
+                            n.style.backgroundColor = 'green';
+                        }
+                    );
+    }
+
+};
+
+iQ.name = function(name){
+
+    if(iQ['nameWorker']){
+        iQ['nameWorker'].postMessage({query: true, queryValue: name});
+    };
+
+};
+
+iQ._workerSetup = function()
+{
+    var workerList = ['name'];
+        workerList.forEach(function(type){
+            var workerName = type + 'Worker',
+                workerFile = 'workers/' + type + '.js',
+                workerResponseName = '_on' + workerName + 'WorkerResponse';
+            iQ[workerName]= new Worker(workerFile);
+            iQ[workerResponseName] = function(e){
+                iQ._workerResponse(e, workerName);
+            };
+            iQ[workerName].addEventListener(
+                    'message',
+                    iQ[workerResponseName],
+                    false
+                );
+            iQ[workerName].postMessage({init: true, initValue: iQ.index});
+
+        });
+
+
+
+
+}
+
+
 iQ.prefixIt = function(it, prefix, escOrJoiner) {
     var joiner = ':';
     if (typeof(escOrJoiner)==='string') joiner= escOrJoiner;
@@ -99,7 +154,7 @@ iQ._index = function () {
                                             index           :i
                                         };
 
-                                    attrs.each(function(attr){
+                                    attrs.forEach(function(attr){
                                         valueResult[attr] = iQ._attr(ixNode, attr);
                                     });
                                     //TODO: Special processing depending on ixType?
@@ -303,13 +358,16 @@ iQ._q = function(queryStringOrNode, queryString, queryMethod)
 
 iQ._text = function(node)
 {
-    return node ? undefined : node.textContent;
+    return node ? node.textContent : undefined;
 }
-
 
 iQ._attr = function(node, attr)
 {
-    return node ? undefined : node.getAttribute(attr);
+    return !node ? 
+                undefined
+                : attr instanceof Array ?
+                    attr.map(function(att){node.getAttribute(att); })
+                    : node.getAttribute(attr);
 }
 
 ///NodeList utilities
