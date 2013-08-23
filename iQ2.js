@@ -73,7 +73,7 @@ iQ._workerSetup = function()
                     iQ[workerResponseName],
                     false
                 );
-            iQ[workerName].postMessage({init: true, initValue: iQ.index});
+            iQ[workerName].postMessage({method: 'makeInvertedIndex', args: [iQ.index]});
 
         });
 
