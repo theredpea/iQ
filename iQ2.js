@@ -32,8 +32,9 @@ iQ._workerResponse = function(event, workerName)
 {
     //event.data contains an array of values
     alert('Got results from worker: ' + workerName);
-    iQ.results = iQ.results || {};
-    iQ.results[workerName] = event.data;
+    //iQ.results = iQ.results || {};
+    //iQ.results[workerName] = event.data;
+    console.log(event.data);
     if (event.data.results instanceof Array)
     {
         iQ._eachNodes(iQ
