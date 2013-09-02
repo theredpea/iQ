@@ -59,7 +59,7 @@ iQ.name = function(name){
 
 iQ._workerSetup = function()
 {
-    var workerList = ['name'];
+    var workerList = ['name', 'date'];
         workerList.forEach(function(type){
             var workerName = type + 'Worker',
                 workerFile = 'workers/' + type + '.js',
@@ -418,3 +418,4 @@ iQ._average = function()
 //========================
 
 iQ._index();
+iQ._workerSetup();

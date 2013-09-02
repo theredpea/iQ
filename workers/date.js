@@ -1,24 +1,26 @@
 
-addEventListener('message', onMessage, false);
+importScripts('base.js');
 
+self.prototype = self.Base;
+//throw (JSON.stringify(self.Base.onMessage) || String(self.Base.onMessage));
 
+addEventListener('message', function(event){ self.prototype.onMessage.call(self,event) }, false);
+
+/*
 function onMessage(event)
 {
 	self.init();
-
 	var method = event.data.method;
 	if (method in self)
 	{
-		self['method'](event.data.args)
+		self[method](event.data.args)
 	}
 
+}*/
 
-	
-
-}
-
-function retrievePostings(args){
+retrievePostings = function(args){
 		var query = args.query || args[0];
+
 
 		var regValue = event.data.queryValue instanceof RegExp ?
 							event.data.queryValue
@@ -32,23 +34,28 @@ function retrievePostings(args){
 }	
 
 
+makeInvertedIndex = function(args){
+	var originalIndex = args.originalIndex 	|| args[0] || [],
+		reset = 		args.reset 			|| args[1] || false;
+		
+	if (self.index && reset)
+		//Cache unless args.reset?
+		self.postMessage({index: self.index})
 
-function makeInvertedIndex(args){
-	var originalIndex = args.originalIndex || args[0];
-	for (id in event.data.originalIndex)
+	for (id in originalIndex)
 	{
-		var iQo = event.data.originalIndex[id],
+		var iQo = originalIndex[id],
 			name = iQo.name;
 
 		self.index[name] = self.index[name] || [];
 		self.index[name].push(id);
 
 	}
+
 	self.postMessage({index: self.index});
 }
 
-
-function init(event){
+init = function(args){
 
 	if(!self.initted){
 
@@ -57,23 +64,12 @@ function init(event){
 		self.query = {
 			matches : function() {
 
-			},
-			contains = 
-
+			}
 
 		};
 	}
 
-	//Using a generalized
-	//self.query = event.data.query;
 	self.initted = true;
 	self.results = [];
 }
 
-///
-function invertedIndex(){
-
-}
-
-function filter
-function query

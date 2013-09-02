@@ -1,12 +1,15 @@
+/*
 {
 	"manifest_version":2, //Version 1 is deprecated
 	"name":"iQ",
 	"description":"iXBRL Tools",
 	"version": "1.0",
 	"permissions":[
+		"third/*"
 	],
 	"browser_action":{
 		"default_icon":"iQlogo.png",
 		"default_popup":"iQpopup.html"
 	}
 }
+*/
