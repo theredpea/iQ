@@ -5,6 +5,9 @@ self.prototype = self.Base;
 
 addEventListener('message', function(event){ self.prototype.onMessage.call(self,event) }, false);
 
+
+//cascadeWorkers
+
 retrievePostings = function(args){
 		var query = args.query || args[0];
 
@@ -21,42 +24,15 @@ retrievePostings = function(args){
 }	
 
 
-makeInvertedIndex = function(args){
-	var originalIndex = args.originalIndex 	|| args[0] || [],
-		reset = 		args.reset 			|| args[1] || false;
-		
-	if (self.invertedindex && reset)
-		//Cache unless args.reset?
-		self.postMessage({index: self.invertedindex})
 
-	for (id in originalIndex)
-	{
-		var iQo = originalIndex[id],
-			name = iQo.name;
-
-		self.invertedindex[name] = self.invertedindex[name] || [];
-		self.invertedindex[name].push(id);
-
-	}
-
-	self.postMessage({index: self.invertedindex});
+getInvertedKey = function(obj) {
+    return obj.contextRef;
 }
 
 init = function(args){
+	self.prototype.init.call(self, args);
 
-	if(!self.initted){
+    //throw JSON.stringify(this.invertedIndex==undefined);
 
-		self.invertedindex = self.invertedindex || {};
-		self.cache = self.cache || {};
-		self.query = {
-			matches : function() {
-
-			}
-
-		};
-	}
-
-	self.initted = true;
-	self.results = [];
 }
 
