@@ -55,7 +55,9 @@ Base = {
 
         this.postMessage({index: this.invertedIndex});
 
-        throw this.prototype.reGet.call(this, 'a.b.c', {a:{b:{c:2}}});
+        //Odd, these don't return the same results?
+        //throw reGet('a.b.c.', {a:{b:{c:2}}});
+        //throw this.prototype.reGet.call(this, 'a.b.c', {a:{b:{c:2}}});
     },
 
     getInvertedKey : function(obj) {
