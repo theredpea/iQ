@@ -27,10 +27,11 @@ Base = {
 
         this.initted = true;
         this.results = [];
+        return !this.initted;
     },
 
     makeInvertedIndex : function(args){
-        var originalIndex = args.originalIndex  || args[0] || [],
+        var originalIndex = args.originalIndex  || args[0] || [],	//It's the first arg;
             reset =         args.reset          || args[1] || false;
 
         if (this.invertedIndex && reset)
@@ -154,7 +155,7 @@ Base = {
 	},
 
 
-	getStats = function(){
+	getStats : function(){
 			return {
 				/*count: ,
 				time:,

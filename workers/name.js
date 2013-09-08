@@ -1,9 +1,42 @@
+importScripts('base.js');
+
+self.prototype = self.Base;
+
+addEventListener('message', function(event){ self.prototype.onMessage.call(self,event) }, false);
+
+getInvertedKey = function(obj) {
+	//TODO: Delegate prefix, localPart to subworkers?
+	return obj.name;
+};
+
+init = function(args){
+	//Defaults
+	if (!self.initted){
+
+	var cont = self.prototype.init.call(self,args);
+	//Continue decides whether it's been initted
+	//if(cont){
+		self.options = {
+			caseInsensitive:true,
+			globalMatch: true,
+			multiLine: true
+		}
+		//Extend
+		if (args && args.options){
+			for (option in args.options){
+				self.options[option] = args.options[option];
+			}
+		}
+	}
+
+	//}
+};
 
 stringFilter = function(query, args){
 
-	var i = this.options.caseInsensitive ? 'i':'',
-		g = this.options.globalMatch ? 'g' : '',
-		m = this.options.multiLine ? 'm' : '',
+	var i = self.options.caseInsensitive ? 'i':'',
+		g = self.options.globalMatch ? 'g' : '',
+		m = self.options.multiLine ? 'm' : '',
 		modifiers = args.modifiers || (i+g+m), //http://www.w3schools.com/jsref/jsref_obj_regexp.asp
 		regEx = new RegExp(query, modifiers);
 
@@ -15,37 +48,3 @@ stringFilter = function(query, args){
 		return regEx.test(object.aspect);		//For a string; key == aspect
 	}
 }
-
-addEventListener('message', 
-function(event)
-{
-	self.index = self.index || {};
-	if(event.data.init && event.data.initValue)
-	{
-		for (id in event.data.initValue)
-		{
-			var iQo = event.data.initValue[id],
-				name = iQo.name;
-
-			self.index[name] = self.index[name] || [];
-			self.index[name].push(id);
-
-		}
-		self.postMessage({index: self.index});
-	}
-	else if (event.data.query && event.data.queryValue)
-	{
-
-		var regValue = event.data.queryValue instanceof RegExp ?
-							event.data.queryValue
-							: new RegExp(event.data.queryValue),
-			keyMatches = Object.keys(self.index).filter(function(name){
-				return name.match(regValue);
-			}),
-			resultIds = keyMatches.map(function(key) { return self.index[key];});
-
-			self.postMessage({results: resultIds});
-	}
-
-},
-false)

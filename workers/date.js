@@ -1,5 +1,6 @@
 
 importScripts('base.js');
+importScripts('aspects/DateExp.js');
 
 self.prototype
  = self.Base;
@@ -11,30 +12,16 @@ addEventListener('message', function(event){ self.prototype.onMessage.call(self,
 
 
 getInvertedKey = function(obj) {
-    return obj.contextRef;
+    return obj.decimals;
 }
 
-DateExp = function(exp){
-	this.exp = exp;
-
-}
-/*
-DateExp.prototype.match = function(dateContext){
-
-}
-*/
-
-DateExp.prototype.test = function(dateContext){
-
-	return true || false;
-}
 
 //Takes a string, produces a function which acts on the object;
 stringFilter = function(query){
 	var dateExp = new DateExp(query);
 
 	return function(object){
-		
+
 		return dateExp.test(object.aspect);
 	}
 	//Check ContextRef
@@ -123,6 +110,7 @@ init = function(args){
 
 };
 
+//Huh?
 matches = function(args){
 
 		var regValue = event.data.queryValue instanceof RegExp ?

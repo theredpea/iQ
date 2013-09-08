@@ -52,6 +52,8 @@ iQ._workerResponse = function(event, workerName)
 
 iQ.name = function(name){
 
+	//Need to give it some GUID; maybe just increment it?
+	//Accommodate and's, or's...
     if(iQ['nameWorker']){
         iQ['nameWorker'].postMessage({query: true, queryValue: name});
     };
@@ -244,13 +246,16 @@ iQ._processContextNodes = function (contextNode, index, nodeList)
 {
 
         //1) date texts are ISO 8601 
-        //2) they are unions of date and dateTIme
+        //2) they are unions of date and dateTime
         //3) there are rules for inferring time if only a date is provided
 
 
         //In original iQ.js, I converted date texts to Date objects
         //TODO: Should I do it? Use the right rules. See iQ.dateFromIso
         //Need to accommodate not just dates, but times; and time zones!
+
+        //TODO:Should this be delegated to the top-level workers for which it's relevant.
+
 
          
         var identifierNode  = iQ.first(contextNode, iQ.prefixIt('identifier', 'xbrli')),
