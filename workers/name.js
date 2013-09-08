@@ -1,5 +1,4 @@
 importScripts('base.js');
-importScripts('utility/set.js');
 
 self.prototype = self.Base;
 

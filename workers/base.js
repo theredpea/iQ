@@ -1,3 +1,5 @@
+importScripts('utility/set.js');
+
 Base = { 
         onMessage: function(event){
                         this.init();
@@ -27,6 +29,11 @@ Base = {
 
         this.initted = true;
         this.results = [];
+
+        //At one point, was assigning this return value to a variable called "continue"
+        //And deciding whether init methods which extend this init method should execute
+
+        this.aspectIndex = (args && (args.aspectIndex || args[2]));
         return !this.initted;
     },
 

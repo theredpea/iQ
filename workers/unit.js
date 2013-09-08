@@ -18,6 +18,7 @@ init = function(args){
 			'$':'USD',
 		}
 
+
 		self.prototype.init.call(self,args);
 	}
 
@@ -26,11 +27,11 @@ init = function(args){
 
 stringFilter = function(query, args){
 
-	if (self.currencyIndex.indexOf(query)>-1){
+	//if (self.currencyIndex[query]) { //query)>-1){ It's not an array
 			//Convert $ to USD, or something
 			//But be aware there are multiple countries who share a symbol for different currencies
-		query = self.currencyIndex[query];
-	};
+	query= self.currencyIndex[query] || query;
+	//};
 
 	return function(object) {
 		//True if the regex matches

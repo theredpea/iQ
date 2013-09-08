@@ -60,14 +60,23 @@ iQ.name = function(name){
 
 };
 
+iQ._workerFileName = function(type){
+	return 'workers/' + type + '.js';
+};
+
+iQ._workerName = function(type){
+	return type + 'Worker';
+};
+
 iQ._workerSetup = function()
 {
-    var workerList = ['name'];
-        workerList.forEach(function(type){
-            var workerName = type + 'Worker',
-                workerFile = 'workers/' + type + '.js',
+    var workerTypeList = ['name', 'unit'];// 'date', 'unit';
+        workerTypeList.forEach(function(type){
+            var workerName = iQ._workerName(type),
+                workerFile = iQ._workerFileName(type),
                 workerResponseName = '_on' + workerName + 'WorkerResponse';
-            iQ[workerName]= new Worker(workerFile);
+            //If the worker already exists
+            iQ[workerName]= this[workerName] || new Worker(workerFile);
             iQ[workerResponseName] = function(e){
                 iQ._workerResponse(e, workerName);
             };
@@ -76,7 +85,16 @@ iQ._workerSetup = function()
                     iQ[workerResponseName],
                     false
                 );
-            iQ[workerName].postMessage({method: 'makeInvertedIndex', args: [iQ.index]});
+
+            var args = [iQ.index],
+            	aspectIndex;
+            if (this.aspectIndices && (aspectIndex = this.aspectIndices[type])){
+            	args.aspectIndex = aspectIndex; 
+            }
+            iQ[workerName].postMessage({
+            	method: 'makeInvertedIndex', 
+            	args: args,
+            	});
 
         });
 
@@ -226,13 +244,16 @@ iQ._processHeader = function()
         contexts    = iQ.all(header, iQ.prefixPlusIt('context', 'xbrli')),
         units       = iQ.all(header, iQ.prefixPlusIt('unit', 'xbrli'));
 
+        iQ.unitRef ={};
+        iQ.contextRef = {};
         //unit is used by unitWorker
             //unitWorker might delegate to numeratorWorker, denominatorWorker...
         //context is used by contextWorker
             //delegate to startWorker, endWorker, timeSpanWorker, memberWorker, axisWorker
         //TODO: Kick off unitWorker and contextWorker; they can do the de-referencing
-        iQ._contexts = iQ._mapNodes(contexts, iQ._processContextNodes);
-        iQ._units    = iQ._mapNodes(units, iQ._processUnitNodes);   
+  		iQ._eachNodes(contexts, iQ._processContextNodes); // iQ._contexts = iQ._mapNodes
+
+    	iQ._eachNodes(units, iQ._processUnitNodes);   
 
 };
 
@@ -260,6 +281,7 @@ iQ._processContextNodes = function (contextNode, index, nodeList)
          
         var identifierNode  = iQ.first(contextNode, iQ.prefixIt('identifier', 'xbrli')),
             periodNode      = iQ.first(contextNode, iQ.prefixIt('period', 'xbrli')),
+            segmentNodes    = iQ.all(contextNode, iQ.prefixIt('segment', 'xbrli')),
             periodTextF     = function(text) { return iQ._text(iQ.first(periodNode, iQ.prefixIt(text, 'xbrli'))) },
             segmentMaker    = function(s) { return function(memberNode) { s[iQ._attr(memberNode, 'dimension')] = iQ._text(memberNode) }},
             startDate       = periodTextF('startDate'),
@@ -271,7 +293,7 @@ iQ._processContextNodes = function (contextNode, index, nodeList)
                 scheme      :iQ._attr(identifierNode)
             },
             segmentObject   = {},
-            throwAway       = iQ._mapNodes(iQ.all(periodNode, segmentMaker(segment))),
+            throwAway       = iQ._eachNodes(segmentNodes, segmentMaker(segmentObject)),
             periodObject    = {
                 startDate       :startDate,
                 startDateDate   :new Date(startDate),   //See above re: method; I don't think IE Date constructors recognize ISO strings
@@ -290,7 +312,8 @@ iQ._processContextNodes = function (contextNode, index, nodeList)
                 segment         :segmentObject,
                 index           :index 
             };
-        return contextResult;
+        //return contextResult;
+        iQ.contextRef[contextResult.id]= contextResult;
 
 };
 
@@ -394,7 +417,7 @@ iQ._eachNodes = function(nodeList, eachFunction, results)
     [].forEach.call(nodeList, eachFunction);
 }
 
-iQ._mapNode = function(nodeList, eachFunction)
+iQ._mapNodes = function(nodeList, eachFunction)
 {
     /*
     results = {};
@@ -423,5 +446,7 @@ iQ._average = function()
 //UI utilities
 //========================
 
+
+iQ._processHeader();
 iQ._index();
 iQ._workerSetup();
