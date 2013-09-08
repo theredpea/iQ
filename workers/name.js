@@ -1,4 +1,19 @@
 
+stringFilter = function(query){
+
+	var i = this.options.caseInsensitive ? 'i':'',
+		g = this.options.globalMatch ? 'g' : '',
+		m = this.options.multiLine ? 'm' : '',
+		modifiers = i+g+m, //http://www.w3schools.com/jsref/jsref_obj_regexp.asp
+		regEx = new RegExp(query, modifiers);
+
+
+	return function(object) {
+		//True if the regex matches
+		return regEx.test(object.aspect);
+	}
+}
+
 addEventListener('message', 
 function(event)
 {
