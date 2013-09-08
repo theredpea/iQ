@@ -14,8 +14,29 @@ getInvertedKey = function(obj) {
     return obj.contextRef;
 }
 
-stringFilter = function(query){
+DateExp = function(exp){
+	this.exp = exp;
 
+}
+/*
+DateExp.prototype.match = function(dateContext){
+
+}
+*/
+
+DateExp.prototype.test = function(dateContext){
+
+	return true || false;
+}
+
+//Takes a string, produces a function which acts on the object;
+stringFilter = function(query){
+	var dateExp = new DateExp(query);
+
+	return function(object){
+		
+		return dateExp.test(object.aspect);
+	}
 	//Check ContextRef
 		//Comma separated means or? Too complicated...
 		//Modifier

@@ -1,16 +1,18 @@
 
-stringFilter = function(query){
+stringFilter = function(query, args){
 
 	var i = this.options.caseInsensitive ? 'i':'',
 		g = this.options.globalMatch ? 'g' : '',
 		m = this.options.multiLine ? 'm' : '',
-		modifiers = i+g+m, //http://www.w3schools.com/jsref/jsref_obj_regexp.asp
+		modifiers = args.modifiers || (i+g+m), //http://www.w3schools.com/jsref/jsref_obj_regexp.asp
 		regEx = new RegExp(query, modifiers);
 
 
 	return function(object) {
 		//True if the regex matches
-		return regEx.test(object.aspect);
+		//object.key;		//		The simple thing; string representing it;
+		//object.aspect; // 		The complex thing; maybe DateContext object, whatever
+		return regEx.test(object.aspect);		//For a string; key == aspect
 	}
 }
 

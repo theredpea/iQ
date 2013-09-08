@@ -40,7 +40,8 @@ Base = {
         {
 
             var iQo = originalIndex[id],
-                invertedKey = this.getInvertedKey(iQo); //Get the key from the iQ object
+                invertedKey = this.getInvertedKey(iQo); //Get the key from the iQ object; 
+                //extend getInvertedKey to get invertedIndex to hold keys (must be strings;)
 
             this.invertedIndex[invertedKey] = this.invertedIndex[invertedKey] || [];
             this.invertedIndex[invertedKey].push(id);
@@ -85,33 +86,83 @@ Base = {
     		query : ''
     	}
 */
-	
-	retrievePostings = function(args){
+
+//Takes k's, which are the keys representing the main aspect of this worker
+//Produces objects that may be filtered and subsequently re-mapped;
+	aspectMapper : function(k){ 
+				//Only define aspectIndex if you need to map something like
+						//string object, ISO date
+						//into complex DateContext
+				aspect = (this.aspectIndex 
+						&& this.aspectIndex.indexOf(k)>-1) ?
+							this.aspectIndex[k]
+							: k;
+				//Need to hold onto the key because we'll put it through invertedIndexMapper
+				//To map from keys back to  the results; IDs of value locations
+				return { key: k, aspect: aspect };
+	},
+//Takes the object and intelligently maps back into the originalIndex objects
+	invertedIndexMapper : function(object){
+		if (object.key) return this.invertedIndex[object.key] || object;
+		else return this.invertedIndex[object] || object;
+	},
+//This is an identity function; 
+	vocabMapper : function(object){
+		return object.key ? object.key : object;
+
+	},
+
+	retrieveVocab : function(args){
+			args.vocab = this.vocabMapper;
+			return this.retrievePostings(args)
+	},
+
+	retrievePostings : function(args){
 			var query = args.query || args[0],
-				filter = function(){ return true; } //Everything
+				filterFunc = function(object){ return true; },
+				identityFunc = this.aspectMapper || function(object){ return object; },
+				resultsFunc = args.vocab || this.invertedIndexMapper || function(object) { return object},
+				that = this;
 
 				if (typeof(query) == 'string'){
 					
 					try{
-						var evalArg = eval(args);
+						var evalArg = eval(query);
 						if (typeof(evalArg) == 'function');
-						filter = evalArg;
+						filterFunc = evalArg;
 
 					}
 					catch(e){
-						console.log('not a function');
+						console.log('not a function, just a string?' + query);
 
-						filter = this.stringFilter(query);
+						filterFunc = this.stringFilter(query, args);
 					}
 				}
 
-					keyMatches = Object.keys(self.invertedindex).filter(function(name){
-					return name.match(regValue);
-				}),
-				resultIds = keyMatches.map(function(key) { return self.invertedindex[key];});
+					var keyMatches = Object.keys(self.invertedIndex)
+									.map(identityFunc)				//aspectMapper by default; inflates the object
+									.filter(filterFunc),
+					//results could be IDs, which are set-operated into a resultset in main.js
+					//Or results could be something else; vocabulary for a type-ahead
+					results = keyMatches
+									.map(resultsFunc);
 
-				self.postMessage({results: resultIds});
+				self.postMessage({
+							results: 	results, 
+							stats: 		this.getStats() 
+						});
 	},
+
+
+	getStats = function(){
+			return {
+				/*count: ,
+				time:,
+				operations:,
+				depth:, 
+				*/
+			};
+	}
 
 
 
