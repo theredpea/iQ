@@ -1,4 +1,5 @@
 importScripts('base.js');
+importScripts('utility/set.js');
 
 self.prototype = self.Base;
 
@@ -45,6 +46,7 @@ stringFilter = function(query, args){
 		//True if the regex matches
 		//object.key;		//		The simple thing; string representing it;
 		//object.aspect; // 		The complex thing; maybe DateContext object, whatever
+		//throw(query);
 		return regEx.test(object.aspect);		//For a string; key == aspect
 	}
 }

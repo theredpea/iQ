@@ -31,7 +31,7 @@ iQ = {};
 iQ._workerResponse = function(event, workerName)
 {
     //event.data contains an array of values
-    alert('Got results from worker: ' + workerName);
+    //alert('Got results from worker: ' + workerName);
     //iQ.results = iQ.results || {};
     //iQ.results[workerName] = event.data;
     console.log(event.data);
@@ -62,7 +62,7 @@ iQ.name = function(name){
 
 iQ._workerSetup = function()
 {
-    var workerList = ['name', 'date'];
+    var workerList = ['name'];
         workerList.forEach(function(type){
             var workerName = type + 'Worker',
                 workerFile = 'workers/' + type + '.js',

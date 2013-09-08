@@ -88,41 +88,18 @@ Base = {
     	}
 */
 
-//Takes k's, which are the keys representing the main aspect of this worker
-//Produces objects that may be filtered and subsequently re-mapped;
-	aspectMapper : function(k){ 
-				//Only define aspectIndex if you need to map something like
-						//string object, ISO date
-						//into complex DateContext
-				aspect = (this.aspectIndex 
-						&& this.aspectIndex.indexOf(k)>-1) ?
-							this.aspectIndex[k]
-							: k;
-				//Need to hold onto the key because we'll put it through invertedIndexMapper
-				//To map from keys back to  the results; IDs of value locations
-				return { key: k, aspect: aspect };
-	},
 //Takes the object and intelligently maps back into the originalIndex objects
-	invertedIndexMapper : function(object){
-		if (object.key) return this.invertedIndex[object.key] || object;
-		else return this.invertedIndex[object] || object;
-	},
-//This is an identity function; 
-	vocabMapper : function(object){
-		return object.key ? object.key : object;
-
-	},
 
 	retrieveVocab : function(args){
-			args.vocab = this.vocabMapper;
+			args.vocab = vocabMapper;
 			return this.retrievePostings(args)
 	},
 
 	retrievePostings : function(args){
 			var query = args.query || args[0],
 				filterFunc = function(object){ return true; },
-				identityFunc = this.aspectMapper || function(object){ return object; },
-				resultsFunc = args.vocab || this.invertedIndexMapper || function(object) { return object},
+				identityFunc = this.aspectMapper || aspectMapper, //function(object){ return object; },
+				resultsFunc = args.vocab || invertedIndexMapper, // || //function(object) { return object},
 				that = this;
 
 				if (typeof(query) == 'string'){
@@ -134,11 +111,13 @@ Base = {
 
 					}
 					catch(e){
-						console.log('not a function, just a string?' + query);
+						//console.log('not a function, just a string?' + query);
 
 						filterFunc = this.stringFilter(query, args);
 					}
 				}
+					//throw(new String(filterFunc));
+					//throw (new String(identityFunc));
 
 					var keyMatches = Object.keys(self.invertedIndex)
 									.map(identityFunc)				//aspectMapper by default; inflates the object
@@ -147,10 +126,10 @@ Base = {
 					//Or results could be something else; vocabulary for a type-ahead
 					results = keyMatches
 									.map(resultsFunc);
-
+				//throw(new String(self.and));
 				self.postMessage({
-							results: 	results, 
-							stats: 		this.getStats() 
+							results: 	self.or.apply(this,results) 
+							//,stats: 		this.getStats() 
 						});
 	},
 
@@ -183,4 +162,33 @@ reGet = function(arg, obj) {
     }
 
 
+//Takes k's, which are the keys representing the main aspect of this worker
+//Produces objects that may be filtered and subsequently re-mapped;
+	aspectMapper = function(k){ 
+				//Only define aspectIndex if you need to map something like
+						//string object, ISO date
+						//into complex DateContext
+				aspect = (this.aspectIndex 
+						&& this.aspectIndex.indexOf(k)>-1) ?
+							this.aspectIndex[k]
+							: k;
+				//Need to hold onto the key because we'll put it through invertedIndexMapper
+				//To map from keys back to  the results; IDs of value locations
+				return { key: k, aspect: aspect };
+	};
+
+invertedIndexMapper = function(object){
+		if (object.key) return this.invertedIndex[object.key] || object;
+		else return this.invertedIndex[object] || object;
+	};
+//This is an identity function; 
+vocabMapper = function(object){
+		return object.key ? object.key : object;
+
+	};
+
+
 Base.reGet = reGet;
+Base.aspectMapper = aspectMapper;
+Base.invertedIndexMapper = invertedIndexMapper;
+Base.vocabMapper = vocabMapper;
