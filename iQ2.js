@@ -70,7 +70,7 @@ iQ._workerName = function(type){
 
 iQ._workerSetup = function()
 {
-    var workerTypeList = ['name', 'unit'];// 'date', 'unit';
+    var workerTypeList = ['name', 'unit', 'date'];// 'date', 'unit';
         workerTypeList.forEach(function(type){
             var workerName = iQ._workerName(type),
                 workerFile = iQ._workerFileName(type),
@@ -88,9 +88,14 @@ iQ._workerSetup = function()
 
             var args = [iQ.index],
             	aspectIndex;
-            if (this.aspectIndices && (aspectIndex = this.aspectIndices[type])){
+            //console.log(iQ.aspectIndices);
+            if (iQ.aspectIndices && (aspectIndex = iQ.aspectIndices[type])){
+            	//console.log(iQ.aspectIndices);
             	args.aspectIndex = aspectIndex; 
+            	args.push(aspectIndex);
             }
+            console.log(args);
+
             iQ[workerName].postMessage({
             	method: 'makeInvertedIndex', 
             	args: args,
@@ -254,6 +259,10 @@ iQ._processHeader = function()
   		iQ._eachNodes(contexts, iQ._processContextNodes); // iQ._contexts = iQ._mapNodes
 
     	iQ._eachNodes(units, iQ._processUnitNodes);   
+
+    	//TODO: Inefficient, collapse into above?
+    	//Oh, no, not if one-to-many
+    	iQ.aspectIndices = {'unit' : iQ.unitRef, 'date': iQ.contextRef, 'member': iQ.contextRef };
 
 };
 

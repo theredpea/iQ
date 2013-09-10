@@ -2,7 +2,7 @@ importScripts('utility/set.js');
 
 Base = { 
         onMessage: function(event){
-                        this.init();
+                        this.init(event.data.args);
                         //throw JSON.stringify(this.invertedIndex == undefined)_;
                         var method = event.data.method;
 
@@ -33,7 +33,9 @@ Base = {
         //At one point, was assigning this return value to a variable called "continue"
         //And deciding whether init methods which extend this init method should execute
 
-        this.aspectIndex = (args && (args.aspectIndex || args[2]));
+        //throw(new String(args));
+        this.aspectIndex = (args && (args.aspectIndex || args[1]));
+        //throw(this.aspectIndex);
         return !this.initted;
     },
 

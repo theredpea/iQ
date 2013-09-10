@@ -47,6 +47,9 @@
  		//console.log('==length==1');
 		return arguments[0];
 	}
+	else if (arguments.length==0){
+		return [];
+	}
 	else{
 		var keys, i, len, common;
       	keys = {};
@@ -67,11 +70,14 @@
 function union(a,b){
  	if (arguments.length>2){ 
  		//console.log('==length>2');
-		return union.apply(this, [or(arguments[0], arguments[1])].concat(Array.prototype.splice.call(arguments, 2)));
+		return union.apply(this, [union(arguments[0], arguments[1])].concat(Array.prototype.splice.call(arguments, 2)));
 	}
 	else if (arguments.length==1){
  		//console.log('==length==1');
 		return arguments[0];
+	}
+	else if (arguments.length==0){
+		return [];
 	}
 	else{
 	  var obj = {},

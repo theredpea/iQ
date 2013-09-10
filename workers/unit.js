@@ -26,7 +26,7 @@ init = function(args){
 };
 
 stringFilter = function(query, args){
-
+	//throw (new String(this.aspectIndex));
 	//if (self.currencyIndex[query]) { //query)>-1){ It's not an array
 			//Convert $ to USD, or something
 			//But be aware there are multiple countries who share a symbol for different currencies
