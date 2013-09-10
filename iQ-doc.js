@@ -97,27 +97,6 @@ iQ_tax.prototype.dropFiles = function(e)
 iQ_tax.prototype.readFile = function(file, index, files)
 {
 
-    //New reader every time?
-
-    /*
-    this.reader = new FileReader();
-    this.reader.onload = (function(file)
-    {
-        return function(e)
-        {
-
-            var result=e.target.result,
-                name = file.name,
-                size = file.size;
-
-            $('#result').html(result);
-
-        }
-
-
-
-    })(file);
-    */
     var theFileNamed = "The file named \"" + file.name + "\"";
     var withExtension = "with extension " + file.name.extension();
 
@@ -129,6 +108,8 @@ iQ_tax.prototype.readFile = function(file, index, files)
             {
 
                 case 'xsd':  
+                    //https://developer.mozilla.org/en-US/docs/Web/API/FileReader
+                    //readAsText, vs readAsArrayBuffer, or readAsBinaryString, or readAsDataURL
                     this.xsdReader.readAsText(file);
                     break;
                 case 'xml':
@@ -157,11 +138,11 @@ iQ_tax.prototype.tableify = function(event)
 {
 
     var jsonSchema = this.jsonify(event),
-    jTable = $('<table></table>'),
-    jHead = $('<thead></thead>'),
-    jBody = $('<tbody></tbody>'),
-    jHeaderCells=[],
-    jRows=[];
+        jTable = $('<table></table>'),
+        jHead = $('<thead></thead>'),
+        jBody = $('<tbody></tbody>'),
+        jHeaderCells=[],
+        jRows=[];
 
     var i=0,
         elementAttributes=[];
@@ -209,19 +190,49 @@ iQ_tax.prototype.tableify = function(event)
 iQ_tax.prototype.jsonify = function(event)
 {
 
+    //TODO: Don't assume they use 'xs', they may use 'xsd', or nothing at all.
 
     //TODO: Consider slicing bytes
     var jDoc = $(event.target.result);
     
+    var rootElement = jDoc.filter(function(i,e)
+                            {
+                                return e.tagName? true: false;
+                            })[0];
+    var attributes = rootElement.attributes;
+    var prefixForXsd = '';
+
+    for(i=0; i<attributes.length; i++)
+    {
+        var name=attributes[i].name;
+        if (attributes[i].value.indexOf('http://www.w3.org/2001/XMLSchema')>-1) { prefixForXsd = name.slice(name.indexOf(':')+1); break; }
+
+    }
+
+
+
+
     var dSchema = jDoc.toArray().filter(function(element, index, array){
-            return(element.constructor.prototype == document.createElement('unrecognized').constructor.prototype 
-                    && (element.tagName.toLowerCase()=='XS:SCHEMA'.toLowerCase()
-                        || element.tagName.toLowerCase()=='SCHEMA'.toLowerCase()))
+        //var isElementObject = (element.constructor.prototype == document.createElement('unknownElement').constructor.prototype);
+        var isElementObject = element.tagName ? true : false;
+
+        var isSchemaNamed = function() {
+            if (!isElementObject) return false;
+            var tName = element.tagName.toLowerCase();
+            var isQualified = tName==prefixForXsd+':schema' || tName.indexOf('schema')>-1;
+            var isLocal = tName == 'schema';
+
+            return (isQualified || isLocal);
+        };
+
+            //console.log(element.tagName + ' isElementObject: ' + isElementObject + ', isSchemaNamed: ' + isSchemaNamed());
+
+            return(isElementObject && isSchemaNamed());
     });
 
     jSchema = $(dSchema);
 
-    var jElements = jSchema.find(ns('xs\\:element')),
+    var jElements = jSchema.find(ns(prefixForXsd+'\\:element')),
     sNamespaceUrl = jSchema.attr('targetNamespace'), 
     jsonSchema = {};
 
