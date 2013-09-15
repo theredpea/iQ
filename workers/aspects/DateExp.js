@@ -13,20 +13,88 @@ DateExps.ISO_8601_INDEX 	= new RegExp('^([\\+-]?\\d{4}(?!\\d{2}\\b))'+ 									
 									'(\\17[0-5]\\d([\\.,]\\d+)?)?' 		+							//[19]  Optional( \\17 Optional Colon Minute of the hour [20]Optional(Fractional Minute))
 									'([zZ]|([\\+-])([01]\\d|2[0-3]):?([0-5]\\d)?)?)?)?$');			// [21] z or Z for UTC or [22] +/-, [23]Hours offset, An optional colon, [24] Minutes Offset
 
-//http://my.safaribooksonline.com/book/programming/regular-expressions/9780596802837/4dot-validation-and-formatting/id2983571
-//Won't work in Javascript because it uses named capture groups
-//Must use XRegExp instead http://xregexp.com/
-/*
-DateExp.ISO_8601 = /^(?<year>-?(?:[1-9][0-9]*)?[0-9]{4})-(?<month>1[0-2]|0[1-9])-?
-(?<day>3[0-1]|0[1-9]|[1-2][0-9])T(?<hour>2[0-3]|[0-1][0-9]):?
-(?<minute>[0-5][0-9]):(?<second>[0-5][0-9])(?<ms>\.[0-9]+)??
-(?<timezone>Z|[+-](?:2[0-3]|[0-1][0-9]):[0-5][0-9])?$/;
-*/
 
 DateExps.POINT 		= 
 DateExps.SPAN 		= /->/;
 DateExps.RANGE 		= /((?:-=)|(?:=-)|(?:-)|(?:=))/;
-DateExps.DURATION 	= /(->)/;
+DateExps.DURATION 	= /([^(:->)]*)->([^(:->)]*)/;
+
+DateExps.PARTS  = [
+				{name:'yearPart', 		match:1},
+				{name:'monthPart', 		match:5},
+				{name:'dayPart', 		match:7},
+				{name:'hourPart', 		match:15},
+				{name:'minutePart', 	match:16},
+				{name:'secondPart', 	match:19}];
+				
+DateExp = function(exp){
+	this.exp = exp;
+
+	this.isDuration = this.exp.match(DateExps.DURATION);
+
+	if(this.isDuration){//exp.indexOf('->')>-1){
+		//var startAndEnd = exp.split('->');
+		//var isoMatch;
+			this.durationStart = new DateExp(this.isDuration[1]);
+			this.durationEnd = new DateExp(this.isDuration[2]);
+
+		}
+	else{
+		//See DateExp_UnitTests.js for reference to match 
+		this.expMatch8601 = this.exp.match(DateExps.ISO_8601_INDEX);
+		//this.expMatch8601 = this.exp.match(DateExps.ISO_8601_INDEX);
+		this.jsDate = new Date(this.exp);
+
+		for(i in DateExps.PARTS){
+			var part = DateExps.PARTS[i];
+			if(!this.expMatch8601){continue;}
+			this[part.name] = this.expMatch8601[part.match];
+
+			if (!this[part.name] && !this.specificity){
+				this.specificity =  DateExps.PARTS[i-1].name;
+			}
+			else{
+					var tryParse = this[part.name],
+						valueName = part.name.replace('Part', '');
+					if (tryParse) tryParse = tryParse.replace(':','').replace('-','');
+					//console.log(tryParse);
+				try{
+					this[valueName] = parseFloat(tryParse);
+					if(isNaN(this[valueName]) || this[valueName] == undefined){throw new Exception();}
+				}
+				catch(e){
+					this[valueName]=0;
+					console.log('Could not parseFloat for: ' + part.name + ', value: ' + tryParse);
+				}
+
+			}
+		}
+
+
+	}
+		
+
+
+			
+
+};
+
+
+/*
+DateExp.prototype.match = function(dateContext){
+
+}
+*/
+
+
+DateExp.prototype.test = function(dateContext){
+
+	return true || false;
+}
+
+DateExps.DOCUMENTATION = [
+
+];
 
 	//Check ContextRef
 		//Comma separated means or? Too complicated...
@@ -97,60 +165,14 @@ DateExps.DURATION 	= /(->)/;
 			//Identify the smallest unit stated; and create a range to catch all dates within its start and end
 				//i.e. 2013 -fuzzify-> 2013-01-01T00:00:00Z-2013-12-31T23:59:00Z
 
-				
-DateExp = function(exp){
-	this.exp = exp;
-	if(exp.indexOf('->')>-1){
-		var startAndEnd = exp.split('->');
-		this.duration=true;
-		var isoMatch;
-		var parts = [
-				{name:'yearPart', match:0},
-				{name:'monthPart', match:1},
-				{name:'dayPart', match:2},
-				{name:'hourPart', match:3},
-				{name:'minutePart', match:4},
-				{name:'secondPart', match:5}];
-
-		for(i in parts){
-			var part = parts[i];
-			this[part.name] = isoMatch[part.match];
-			if (!this[part.name] && !this.specificity){
-				this.specificity =  parts[i-1].name;
-			}
-			else{
-				try{
-					this[part.name.replace('Part', '')] = parseFloat(this[part]);
-				}
-				catch(e){
-					console.log('Could not parseFloat for: ' + part + ', value: ' + this[part]);
-				}
-			}
-		}
 
 
-		this.jsDate = new Date();
-
-
-		this.durationStart = new DateExp(startAndEnd[0]);
-		this.durationEnd = new DateExp(startAndEnd[1]);
-	}
-	else{
-		this.range=false;
-
-	}
-
-};
-
-
+//http://my.safaribooksonline.com/book/programming/regular-expressions/9780596802837/4dot-validation-and-formatting/id2983571
+//Won't work in Javascript because it uses named capture groups
+//Must use XRegExp instead http://xregexp.com/
 /*
-DateExp.prototype.match = function(dateContext){
-
-}
+DateExp.ISO_8601 = /^(?<year>-?(?:[1-9][0-9]*)?[0-9]{4})-(?<month>1[0-2]|0[1-9])-?
+(?<day>3[0-1]|0[1-9]|[1-2][0-9])T(?<hour>2[0-3]|[0-1][0-9]):?
+(?<minute>[0-5][0-9]):(?<second>[0-5][0-9])(?<ms>\.[0-9]+)??
+(?<timezone>Z|[+-](?:2[0-3]|[0-1][0-9]):[0-5][0-9])?$/;
 */
-
-
-DateExp.prototype.test = function(dateContext){
-
-	return true || false;
-}

@@ -87,8 +87,12 @@ shouldWork.concat(shouldNotWork).forEach(function(e,i,a){
 	else { if (DateExps.ISO_8601_INDEX.test(e)) {console.log('false positive with ' + e); fail=true;} }
 	match = e.match(DateExps.ISO_8601_INDEX);
 	matchLength = match ? match.length : 0;
-	matchString = match ? match.join(',') : ''
-	tbody.innerHTML+='<tr><td>'+e+'</td><td>'+matchLength+'</td><td>'+matchString+'</td><td>'+(fail?'Fail':'Pass')+'</td></tr>'
+	matchString = match ? match.join(',') : '';
+	dateExp = new DateExp(e);
+	matchString = DateExps.PARTS.map(function(e,i,a){ return dateExp[e.name.replace('Part','')]; }).join(',');
+	isoString = 'false';
+	try{isoString=dateExp.jsDate.toISOString(); } catch(e){}
+	tbody.innerHTML+='<tr class="'+isoString+'"><td>'+e+'</td><td>'+matchLength+'</td><td>'+matchString+'</td><td>'+(fail?'Fail':'Pass')+'</td><td>'+isoString+'</td></tr>'
 });
 /*
 shouldNotWork.forEach(function(e,i,a){
@@ -97,3 +101,33 @@ shouldNotWork.forEach(function(e,i,a){
 	if (DateExps.ISO_8601_INDEX.test(e)) console.log('false positive with ' + e);
 });
 */
+
+
+		//
+		//["2010-02-18T16:23:48,444", 		[0]
+		//"2010", 							[1]		yearPart
+		//"-02-18T16:23:48,444", 			[2]
+		//"-", 								[3]
+		//"02-18", 							[4]
+		//"02", 							[5]		monthPart
+		//"-18", 							[6]
+		//"18",  							[7]		dayPart
+		//undefined,  						[8]
+		//undefined, 						[9] 
+		//undefined, 						[10] 
+		//undefined, 						[11] 
+		//"T16:23:48,444", 					[12] 
+		//"16:23", 							[13] 	
+		//"16:23", 							[14] 
+		//"16", 							[15] 	hourPart
+		//":23", 							[16] 	minutePart (plus)
+		//":", 								[17] 
+		//undefined, 						[18] 
+		//":48,444", 						[19] 	secondPart (plus)
+		//",444", 							[20] 
+		//undefined, 						[21] 
+		//undefined, 						[22] 
+		//undefined, 						[23] 
+		//undefined, 						[24] 
+		//index: 0, 						[25] 
+		//input: "2010-02-18T16:23:48,444"] 							[1]
