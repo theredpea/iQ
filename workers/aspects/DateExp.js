@@ -50,24 +50,28 @@ DateExp = function(exp){
 			if(!this.expMatch8601){continue;}
 			this[part.name] = this.expMatch8601[part.match];
 
-			if (!this[part.name] && !this.specificity){
+			if (!this[part.name] && !this.specificity){ //Go to the lowest possible specificity
 				this.specificity =  DateExps.PARTS[i-1].name;
 			}
-			else{
+			if(this[part.name]){
+				this.specificity = undefined;//part.name; // At least as specific as this
+			}
+			//else{
 					var tryParse = this[part.name],
 						valueName = part.name.replace('Part', '');
 					if (tryParse) tryParse = tryParse.replace(':','').replace('-','');
 					//console.log(tryParse);
 				try{
 					this[valueName] = parseFloat(tryParse);
-					if(isNaN(this[valueName]) || this[valueName] == undefined){throw new Exception();}
+					console.log(this[valueName]);
+					if(isNaN(this[valueName]) || this[valueName] == undefined || this[valueName]==null){throw new Exception();}
 				}
 				catch(e){
 					this[valueName]=0;
 					console.log('Could not parseFloat for: ' + part.name + ', value: ' + tryParse);
 				}
 
-			}
+			//}
 		}
 
 

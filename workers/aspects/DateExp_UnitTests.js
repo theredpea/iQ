@@ -92,7 +92,7 @@ shouldWork.concat(shouldNotWork).forEach(function(e,i,a){
 	matchString = DateExps.PARTS.map(function(e,i,a){ return dateExp[e.name.replace('Part','')]; }).join(',');
 	isoString = 'false';
 	try{isoString=dateExp.jsDate.toISOString(); } catch(e){}
-	tbody.innerHTML+='<tr class="'+isoString+'"><td>'+e+'</td><td>'+matchLength+'</td><td>'+matchString+'</td><td>'+(fail?'Fail':'Pass')+'</td><td>'+isoString+'</td></tr>'
+	tbody.innerHTML+='<tr class="'+isoString+'"><td>'+e+'</td><td>'+matchLength+'</td><td>'+matchString+'</td><td>'+(fail?'Fail':'Pass')+'</td><td>'+isoString+'</td><td>'+dateExp.specificity+'</td></tr>'
 });
 /*
 shouldNotWork.forEach(function(e,i,a){
