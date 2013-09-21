@@ -109,6 +109,7 @@ shouldWork.concat(shouldNotWork).forEach(function(e,i,a){
 duration = {
 
 }
+
 duration.shouldWork = ['P2013'];
 duration.shouldNotWork = [];
 duration.test = function(){

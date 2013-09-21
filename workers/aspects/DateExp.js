@@ -13,10 +13,30 @@ DateExps.ISO_8601_POINT 	= new RegExp('^([\\+-]?\\d{4}(?!\\d{2}\\b))'+ 									
 									'(\\17[0-5]\\d([\\.,]\\d+)?)?' 		+							//[19]  Optional( \\17 Optional Colon Minute of the hour [20]Optional(Fractional Minute))
 									'([zZ]|([\\+-])([01]\\d|2[0-3]):?([0-5]\\d)?)?)?)?$');			// [21] z or Z for UTC or [22] +/-, [23]Hours offset, An optional colon, [24] Minutes Offset
 
+DateExps.POINT_PARTS  = [
+				{name:'yearPart', 		matchIndex:1},
+				{name:'monthPart', 		matchIndex:5},
+				{name:'dayPart', 		matchIndex:7},
+				{name:'hourPart', 		matchIndex:15},
+				{name:'minutePart', 	matchIndex:16},
+				{name:'secondPart', 	matchIndex:19}];
+
 
 //The smallest value used can have a fractional version 
 DateExps.ISO_8601_DURATION		= new RegExp('(P(\d*\.\d*)*Y*(\d*\.\d*)*M*(\d*\.\d*)*D*)(T(\d*\.\d*)*H*(\d*\.\d*)*M*(\d*\.\d*)*S*)*');
-DateExps.POINT;
+
+DateExps.DURATION_PARTS  = [
+				//{name:'datePart', 		matchIndex:1},
+				{name:'yearPart', 		matchIndex:2},
+				{name:'monthPart', 		matchIndex:3},
+				{name:'dayPart', 		matchIndex:4},
+				//{name:'timePart', 		matchIndex:5},
+				{name:'hourPart', 		matchIndex:6},
+				{name:'minutePart', 	matchIndex:7},
+				{name:'secondPart', 	matchIndex:8}];
+				
+
+//DateExps.POINT;
 //DateExps.RANGE 		= /((?:-=)|(?:=-)|(?:-)|(?:=))/; Overkill
 //I'm going to co-opt my old INTERVAL symbol for the RANGE instead
 DateExps.RANGE = '->';
@@ -37,24 +57,6 @@ DateExps.RANGE = '->';
 
 //http://my.safaribooksonline.com/book/programming/regular-expressions/9780596802837/4dot-validation-and-formatting/id2983571
 
-DateExps.POINT_PARTS  = [
-				{name:'yearPart', 		matchIndex:1},
-				{name:'monthPart', 		matchIndex:5},
-				{name:'dayPart', 		matchIndex:7},
-				{name:'hourPart', 		matchIndex:15},
-				{name:'minutePart', 	matchIndex:16},
-				{name:'secondPart', 	matchIndex:19}];
-
-DateExps.DURATION_PARTS  = [
-				//{name:'datePart', 		matchIndex:1},
-				{name:'yearPart', 		matchIndex:2},
-				{name:'monthPart', 		matchIndex:3},
-				{name:'dayPart', 		matchIndex:4},
-				//{name:'timePart', 		matchIndex:5},
-				{name:'hourPart', 		matchIndex:6},
-				{name:'minutePart', 	matchIndex:7},
-				{name:'secondPart', 	matchIndex:8}];
-				
 
 DateExps.RANGED = function(bookend, rangeSymbol){
 	if(!bookend) return;
@@ -76,17 +78,26 @@ DateExps.MatchesExpOrExpRange = function(s, exp, rangeSymbol){
 }
 
 RangeExp = function(s){
-	this._init(s);
+	//Allow assigning prototypes to a new RangeExp(), without passing an argument
+	if(s) 	this._init(s);
 }
 
-RangeExp.prototype._init(s){
+//TODO: instead of an s, call it a dateExpString? [^a-zA-Z]s[^a-zA-Z]
+RangeExp.prototype._init = function(s, options){
 	//Invoke this base._init();
 	this.s=s;
+	this.optionString=options;
+	this.options={};
+	this._parseOptions();//options);
 	this._setProperties();
 	//Assign this.exp to whatever is appropriate, ISO_8601_DURATION
 	this._validateState();
 };
+RangeExp.prototype._parseOptions = function(){
+	this.options.fuzzy = this.optionString.indexOf('f')>-1;
+	//this.options.fuzzy = this.optionString.indexOf('f')>-1;
 
+};	
 
 
 RangeExp.prototype._validateState = function(){
@@ -190,54 +201,85 @@ RangeExp.prototype._lessThan = function(a, b){
 
 
 
-PointExp = function(args){ 
-	RangeExp.constructor.apply(this, args);
+PointExp = function(s, options){ 
+
+			//this.exp;
+			//this.options;
+			//this.options.fuzzy; 	// Generic enough we can accommodate in the base class
+	this.exp = DateExps.ISO_8601_POINT;
+	this.parts = DateExps.POINT_PARTS; //Establish at this point
+	//TODO:Extract options, or make that its own method?
+
+	RangeExp.constructor.apply(this, [s, options]);//arguments);
 };
 
 PointExp.prototype = new RangeExp(); //RangeExp.prototype;
 
-PointExp.prototype._hydrate = function(m){
+//TODO: Instead of making this extensible by a "brother" class; DurExp
+//Build this as default implementation;
+//Make this.parts be provided in the setup, just like this.exp (after all, this.parts is primarily serving as the named capture group regex equivalent)
+
+PointExp.prototype._setSpecificity = function(hydratedObject, currentName, previousName, specificityInt){
+
+			if (!hydratedObject[currentName] && !hydratedObject.specificity){ 
+				//i.e. this does not allow for resuming specificity;
+				//It is stopped as soon as you don't declare something in the order
+				hydratedObject.specificity =  previousName; 
+				hydratedObject.specificityInt = specificityInt;
+
+			}
+
+};
+
+PointExp.prototype._hydrate = function(m, parts){
+
 
 		var hydratedObject = {
 				jsDate : new Date(m),
 				match : m.match(this.exp),
 				specificity : undefined,
-				specificityInt : 0,
-		}
+				specificityInt : 0
+			},
+			specificityInt = 0,
+			parts = this.parts || parts  || DateExps.POINT_PARTS;
 
-		for(index in DateExps.POINT_PARTS){	//Must go in-order
 
-			var part = DateExps.POINT_PARTS[index];
+		for(index in parts){	//Must go in-order, because specificity rules apply
+
+			var part = parts[index];		// ex { name: 'datePart', matchIndex: 0}		
+			specificityInt++;
 			hydratedObject[part.name] = match[part.matchIndex];
+			
+			//If it doesn't have a match at this part...
+			//TODO: Abstract into its own method; change hydratedObject based on criteria
 
-			//Go to the lowest possible specificity...
-			//Wait, while this is an allowable scenario, it's strange, how does it help us implement fuzzy?
-			//5 years and 3 days, makes sense; 5 years 3 days, 0 hours, 0 minutes, 0 seconds, 
-			//to 5 years, 3 days, 24 hours, 0 minutes, 0 seconds
+			this._setSpecificity(hydratedObject, currentName, previousName, specificityInt);
 
-			//But year 2013, day 14... it doesn't make sense? It must follow a month.
-			if (!this[part.name] && !this.specificity){ 
-				this.specificity =  DateExps.POINT_PARTS[i-1].name;
+
+			//Use 'Part' to represent the raw value of the match, like 'yearPart' represents the string '2013', 
+				//or maybe even '2013-', depending on the regex; totally unprocessed
+			//Strip off 'Part' to represent the intended value/type of the match, like 'year' represents the int 2013
+			var tryParse = hydratedObject[part.name],
+				valueName = part.name.replace('Part', '');
+				
+			//Common processing for all of the parts of the Point exp
+			if (tryParse) tryParse = tryParse
+										.replace(':','')
+										.replace('-','');
+
+			try{
+				hydratedObject[valueName] = parseFloat(tryParse);
+
+				if(!hydratedObject[valueName]){	throw new Exception();	}
 			}
-			if(this[part.name]){
-				this.specificity = undefined;//part.name; // At least as specific as this
+			catch(e){
+				hydratedObject[valueName]=0;
+				//Any other reasons for exception?
+				//TODO: Maybe better to pack this reason into my custom Exception, so this message isn't vague, like "or"
+				console.log('Could not parseFloat (or else it produced NaN, undefined, null...) for name:\n\t' + 
+								part.name + '\nvalue:\n\t' + tryParse);
 			}
-			//else{
-					var tryParse = this[part.name],
-						valueName = part.name.replace('Part', '');
-					if (tryParse) tryParse = tryParse.replace(':','').replace('-','');
-					//console.log(tryParse);
-				try{
-					this[valueName] = parseFloat(tryParse);
-					console.log(this[valueName]);
-					if(isNaN(this[valueName]) || this[valueName] == undefined || this[valueName]==null){throw new Exception();}
-				}
-				catch(e){
-					this[valueName]=0;
-					console.log('Could not parseFloat for: ' + part.name + ', value: ' + tryParse);
-				}
 
-			//}
 		}
 
 		return hydratedObject;
@@ -245,12 +287,36 @@ PointExp.prototype._hydrate = function(m){
 };
 
 //Apply RangeExp's constructor?
-DurExp = function(args){ 
-	RangeExp.constructor.apply(this, args);
+DurExp = function(s, options){ 
+
+			//this.exp;
+			//this.options;
+			//this.options.fuzzy; 	// Generic enough we can accommodate in the base class
+	this.exp = DateExps.ISO_8601_DURATION;
+	this.parts = DateExps.DURATION_PARTS; //Establish at this point
+	//TODO:Extract options, or make that its own method?
+
+	RangeExp.constructor.apply(this, [s, options]);//arguments);
+
 };
+
 DurExp.prototype = new RangeExp(); //RangeExp.prototype;
 
+/*
+DurExp.prototype._hydrate = function(m){
+	PointExp.prototoype._hydrate.apply(this, DateExps.DURATION_PARTS);
 
+};*/
+
+DurExp.prototype._setSpecificity = function(hydratedObject, currentName, previousName, specificityInt){
+	PointExp.prototoype._setSpecificity.apply(this, [hydratedObject, currentName, previousName, specificityInt]);
+
+	//Reset specificity, allow it to continue moving down the chain; a Month duration isn't necessary  if they've provided a day duration
+	if(hydratedObject[currentName]){
+		hydratedObject.specificity=undefined;
+	}
+
+};
 
 /*
 //Encompasses the two concepts PointExp and DurExp
@@ -261,8 +327,8 @@ InterExp.prototype = RangeExp.prototype;
 */
 
 //Encompasses all three, PointExp, DurExp, InterExp
-DateExp = function(exp){
-	this.exp = exp;
+DateExp = function(s){
+	this.s = s;
 
 	//'Range of' is something that can be abstracted...
 	//Changes the properties from 'onDate' to 'startDate' and 'endDate'
@@ -281,8 +347,9 @@ DateExp = function(exp){
 
 	//Need a "router" to hand it to the right construction
 
-	this.isDuration = this.exp.match(DateExps.INTERVAL)				//
-					|| this.exp.match(DateExps.ISO_8601_DURATION);
+	if(s){
+
+	}
 
 	
 
