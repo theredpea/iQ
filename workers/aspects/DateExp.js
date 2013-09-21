@@ -77,9 +77,9 @@ DateExps.MatchesExpOrExpRange = function(s, exp, rangeSymbol){
 			|| s.match(DateExps.RANGED(exp, rangeSymbol));		//Should have a length of 3; start and end parts are at [1] and [2]
 }
 
-RangeExp = function(s){
+RangeExp = function(s, options){
 	//Allow assigning prototypes to a new RangeExp(), without passing an argument
-	if(s) 	this._init(s);
+	if(s) 	this._init(s, options);
 }
 
 //TODO: instead of an s, call it a dateExpString? [^a-zA-Z]s[^a-zA-Z]
@@ -94,8 +94,10 @@ RangeExp.prototype._init = function(s, options){
 	this._validateState();
 };
 RangeExp.prototype._parseOptions = function(){
-	this.options.fuzzy = this.optionString.indexOf('f')>-1;
-	//this.options.fuzzy = this.optionString.indexOf('f')>-1;
+	if (this.optionString){
+		this.options.fuzzy = this.optionString.indexOf('f')>-1;
+		//this.options.fuzzy = this.optionString.indexOf('f')>-1;
+	}
 
 };	
 
@@ -210,7 +212,7 @@ PointExp = function(s, options){
 	this.parts = DateExps.POINT_PARTS; //Establish at this point
 	//TODO:Extract options, or make that its own method?
 
-	RangeExp.constructor.apply(this, [s, options]);//arguments);
+	this.constructor.apply(this, [s, options]);//arguments);
 };
 
 PointExp.prototype = new RangeExp(); //RangeExp.prototype;
@@ -246,13 +248,13 @@ PointExp.prototype._hydrate = function(m, parts){
 
 		for(index in parts){	//Must go in-order, because specificity rules apply
 
-			var part = parts[index];		// ex { name: 'datePart', matchIndex: 0}		
-			specificityInt++;
-			hydratedObject[part.name] = match[part.matchIndex];
-			
-			//If it doesn't have a match at this part...
-			//TODO: Abstract into its own method; change hydratedObject based on criteria
+			var part = parts[index],			// ex { name: 'datePart', matchIndex: 0}	
+				currentName = part.name,
+				previousName = parts[index-1] ? parts[index-1].name : ''; //Affects specificity	
 
+			hydratedObject[currentName] = hydratedObject.match[part.matchIndex];
+			
+			specificityInt++;
 			this._setSpecificity(hydratedObject, currentName, previousName, specificityInt);
 
 
@@ -296,7 +298,7 @@ DurExp = function(s, options){
 	this.parts = DateExps.DURATION_PARTS; //Establish at this point
 	//TODO:Extract options, or make that its own method?
 
-	RangeExp.constructor.apply(this, [s, options]);//arguments);
+	this.constructor.apply(this, [s, options]);//arguments);
 
 };
 
@@ -327,8 +329,9 @@ InterExp.prototype = RangeExp.prototype;
 */
 
 //Encompasses all three, PointExp, DurExp, InterExp
-DateExp = function(s){
-	this.s = s;
+DateExp = function(s, options){
+	//this.s = s;
+	//this.optionString = options;
 
 	//'Range of' is something that can be abstracted...
 	//Changes the properties from 'onDate' to 'startDate' and 'endDate'
@@ -347,9 +350,18 @@ DateExp = function(s){
 
 	//Need a "router" to hand it to the right construction
 
-	if(s){
+
+	if(DateExps.MatchesExpOrExpRange(s, DateExps.ISO_8601_POINT).length>-1){
+		this.exp = new PointExp(s, options);
+	}
+	else if(DateExps.MatchesExpOrExpRange(s, DateExps.ISO_8601_DURATION).length>-1){
+		this.exp = new DurExp(s, options);
 
 	}
+	/*
+	else if(DateExps.MatchesExpOrExpRange(s, DateExps.ISO_8601_DURATION).length>-1){
+
+	}*/
 
 	
 
