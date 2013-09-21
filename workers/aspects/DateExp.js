@@ -69,57 +69,154 @@ DateExps.RANGED = function(bookend, rangeSymbol){
 
 };
 
-DateExps.MatchesExpOrExpRange = function(s, exp){
+DateExps.MatchesExpOrExpRange = function(s, exp, rangeSymbol){
 
 	return s.match(exp) 							//Should have a length of 1; on part is at [0]
-			|| s.match(DateExps.RANGED(exp));		//Should have a length of 3; start and end parts are at [1] and [2]
+			|| s.match(DateExps.RANGED(exp, rangeSymbol));		//Should have a length of 3; start and end parts are at [1] and [2]
 }
 
 RangeExp = function(s){
 	this._init(s);
 }
 
-RangeExp.prototype._init(){
+RangeExp.prototype._init(s){
 	//Invoke this base._init();
 	this.s=s;
-	this._getRange();
+	this._setProperties();
 	//Assign this.exp to whatever is appropriate, ISO_8601_DURATION
-
+	this._validateState();
 };
 
 
 
-RangeExp.prototype._getRange(){
+RangeExp.prototype._validateState = function(){
 
-	//Subclasses must establish
-	this.matches = DateExps.MatchesExpOrExpRange(this.s, this.exp);
+	//Validate start is less than end; allow subclasses to define "less"
+};
+
+
+RangeExp.prototype._setProperties = function(){
+
+	//Subclasses must establish:
+		//The user provides:
+			//this.exp;
+			//this.options;
+			//this.options.fuzzy; 	// Generic enough we can accommodate in the base class
+
+		//User does not provide, isntead, Developer / Class provides:
+			//this.maxSpecificity; 	// Complements the idea of fuzzy
+	this.matches = DateExps.MatchesExpOrExpRange(this.s, this.exp, this.rangeSymbol);
 
 	if(!this.matches){
 		//Validation; alert message?
 	}
 	else if (this.matches.length>1){
 
-		this.startValue = this.matches[1];
-		this.endValue = this.matches[2];
+		this.startValue = this._hydrate(this.matches[1]);
+		this.endValue = this._hydrate(this.matches[2]);
+
+		this.testFunc = this._betweenStartAndEndValue;
 
 	} else if (this.matches.length==1){
-		this.onValue = this.matches[0];
-	} 
 
-	this.validate();
+		if (this._isFuzzy(this.matches[0])) {	 //Fuzzy are implicit ranges
+				this.startValue = this._hydrateFuzzyStart(this.matches[0]);
+				this.endValue = this._hydrateFuzzyEnd(this.matches[0]);
+
+				this.testFunc = this._betweenStartAndEndValue;
+
+		}
+		else{
+
+			this.onValue = this._hydrate(this.matches[0]);
+			this.testFunc = this._equalsOnValue;
+		}
+
+	}
+
+};
+
+RangeExp.prototype._isFuzzy = function(m){
+		//Theoretically we should use the second clause;
+		//In this generic case now I can either give 'm' an actual specificityInt, making m an object and making native > or < comparison pretty lame
+		//Or let specificityInt remain undefined
+		//Since I'd have to make an arbitrary decision in the first case...
+		return this.options.fuzzy && (this._hydrate(m).specificityInt < this.maxSpecificityInt);
+};
+
+
+		//The output is an object with expected properties like
+			//specificityInt; int representing the "level"
+			//specificity; string representing the "level"
+RangeExp.prototype._hydrate = function(m){
+	return m;
+};
+
+RangeExp.prototype._hydrateFuzzyStart = function(m){
+	//Hard to imagine a generic case for hydrateFuzzyStart, even if the expressions were strings	
+	return m;
+};
+RangeExp.prototype._hydrateFuzzyEnd = function(m){
+	return m;
+};
+//The strictest/plainest implementations that I can imagine
+//Would be more complex to handle;
+	//1) if testObj is one of different types
+//But fuzzy logic is inherently saying you're so vague (unspecific) it's a range;
+
+RangeExp.prototype._equalsOnValue = function(testObj, optionalComparisonObject){
+		return testObj == (optionalComparisonObject || this.onValue);
+
+};
+
+RangeExp.prototype._betweenStartAndEndValue = function(testObj){
+		//Allows the user to omit start or end value, an open-ended range
+		return (!this.startValue || this._greaterThan(testObj, this.startValue)) 
+				&& (!this.endValue || this._lessThan(testObj, this.endValue));
+};
+
+
+RangeExp.prototype._greaterThan = function(a, b){
+	return a>b;
+};
+
+//So this doesn't need to be over-ridden
+RangeExp.prototype._lessThan = function(a, b){
+	return (!this._greaterThan(a,b)) && (!this._equalsOnValue(a,b));
 }
 
 
-RangeExp.prototype.validate(){
-	//Validate start is less than end; allow subclasses to define "less"
-}
 
 
 
-PointExp = function(){}
-DurExp = function(){}
+
+PointExp = function(args){ 
+	RangeExp.constructor.apply(this, args);
+};
+
+PointExp.prototype = new RangeExp(); //RangeExp.prototype;
+
+PointExp.prototype._hydrate = function(m){
+
+};
+
+//Apply RangeExp's constructor?
+DurExp = function(args){ 
+	RangeExp.constructor.apply(this, args);
+};
+DurExp.prototype = new RangeExp(); //RangeExp.prototype;
+
+
+
+/*
+//Encompasses the two concepts PointExp and DurExp
+//Overkill? 
+
 InterExp = function(){}
+InterExp.prototype = RangeExp.prototype;
+*/
 
+//Encompasses all three, PointExp, DurExp, InterExp
 DateExp = function(exp){
 	this.exp = exp;
 
@@ -154,12 +251,14 @@ DateExp = function(exp){
 		//this.expMatch8601 = this.exp.match(DateExps.ISO_8601_POINT);
 		this.jsDate = new Date(this.exp);
 
+		specificityInt=0;
 		for(i in DateExps.POINT_PARTS){
 			var part = DateExps.POINT_PARTS[i];
-			if(!this.expMatch8601){continue;}
+			//if(!this.expMatch8601){continue;}
 			this[part.name] = this.expMatch8601[part.match];
 
-			if (!this[part.name] && !this.specificity){ //Go to the lowest possible specificity
+			if (!this[part.name] && !this.specificity){ 
+				//Go to the lowest possible specificity
 				this.specificity =  DateExps.POINT_PARTS[i-1].name;
 			}
 			if(this[part.name]){
