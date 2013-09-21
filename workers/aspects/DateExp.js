@@ -2,7 +2,7 @@
 //TODO: Replace single backslashes with double backslashes
 
 DateExps={}
-DateExps.ISO_8601_INDEX 	= new RegExp('^([\\+-]?\\d{4}(?!\\d{2}\\b))'+ 									//[1](Optional signage, year, not followed by two digits) 
+DateExps.ISO_8601_POINT 	= new RegExp('^([\\+-]?\\d{4}(?!\\d{2}\\b))'+ 									//[1](Optional signage, year, not followed by two digits) 
 								'((-?)((0[1-9]|1[0-2])' +										//[2]([3]Optional hyphen. [4]Optional([5]The month, 1-indexed
 									'(\\3([12]\\d|0[1-9]|3[01]))?' + 								//[6](\\3 Optional hyphen, [7]The day of month))
 									'|W([0-4]\\d|5[0-2])(-?[1-7])?' + 							//W (for "Week") [8](Week) [9]Optional(Optional hyphen, Day of Week)  	//r.exec('2009-W21-2T01:22')[8] == '21'
@@ -14,10 +14,15 @@ DateExps.ISO_8601_INDEX 	= new RegExp('^([\\+-]?\\d{4}(?!\\d{2}\\b))'+ 									
 									'([zZ]|([\\+-])([01]\\d|2[0-3]):?([0-5]\\d)?)?)?)?$');			// [21] z or Z for UTC or [22] +/-, [23]Hours offset, An optional colon, [24] Minutes Offset
 
 
-DateExps.POINT 		= 
+//The smallest value used can have a fractional version
+DateExps.ISO_8601_DURATION		= new RegExp('P(\d*\.\d*)*Y*(\d*\.\d*)*M*(\d*\.\d*)*D*(T(\d*\.\d*)*H*(\d*\.\d*)*M*(\d*\.\d*)*S*)*')
+DateExps.POINT;
 DateExps.SPAN 		= /->/;
 DateExps.RANGE 		= /((?:-=)|(?:=-)|(?:-)|(?:=))/;
 DateExps.DURATION 	= /([^(:->)]*)->([^(:->)]*)/;
+
+
+//http://my.safaribooksonline.com/book/programming/regular-expressions/9780596802837/4dot-validation-and-formatting/id2983571
 
 DateExps.PARTS  = [
 				{name:'yearPart', 		match:1},

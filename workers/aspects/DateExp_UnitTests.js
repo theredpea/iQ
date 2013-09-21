@@ -85,9 +85,11 @@ shouldWork.concat(shouldNotWork).forEach(function(e,i,a){
 	//console.log(e.match(DateExps.ISO_8601_INDEX));
 	if (should) { if (!DateExps.ISO_8601_INDEX.test(e)) {console.log('false negative with ' + e); fail=true;}}
 	else { if (DateExps.ISO_8601_INDEX.test(e)) {console.log('false positive with ' + e); fail=true;} }
+
 	match = e.match(DateExps.ISO_8601_INDEX);
 	matchLength = match ? match.length : 0;
 	matchString = match ? match.join(',') : '';
+	
 	dateExp = new DateExp(e);
 	matchString = DateExps.PARTS.map(function(e,i,a){ return dateExp[e.name.replace('Part','')]; }).join(',');
 	isoString = 'false';
