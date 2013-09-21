@@ -38,22 +38,22 @@ DateExps.RANGE = '->';
 //http://my.safaribooksonline.com/book/programming/regular-expressions/9780596802837/4dot-validation-and-formatting/id2983571
 
 DateExps.POINT_PARTS  = [
-				{name:'yearPart', 		match:1},
-				{name:'monthPart', 		match:5},
-				{name:'dayPart', 		match:7},
-				{name:'hourPart', 		match:15},
-				{name:'minutePart', 	match:16},
-				{name:'secondPart', 	match:19}];
+				{name:'yearPart', 		matchIndex:1},
+				{name:'monthPart', 		matchIndex:5},
+				{name:'dayPart', 		matchIndex:7},
+				{name:'hourPart', 		matchIndex:15},
+				{name:'minutePart', 	matchIndex:16},
+				{name:'secondPart', 	matchIndex:19}];
 
 DateExps.DURATION_PARTS  = [
-				//{name:'datePart', 		match:1},
-				{name:'yearPart', 		match:2},
-				{name:'monthPart', 		match:3},
-				{name:'dayPart', 		match:4},
-				//{name:'timePart', 		match:5},
-				{name:'hourPart', 		match:6},
-				{name:'minutePart', 	match:7},
-				{name:'secondPart', 	match:8}];
+				//{name:'datePart', 		matchIndex:1},
+				{name:'yearPart', 		matchIndex:2},
+				{name:'monthPart', 		matchIndex:3},
+				{name:'dayPart', 		matchIndex:4},
+				//{name:'timePart', 		matchIndex:5},
+				{name:'hourPart', 		matchIndex:6},
+				{name:'minutePart', 	matchIndex:7},
+				{name:'secondPart', 	matchIndex:8}];
 				
 
 DateExps.RANGED = function(bookend, rangeSymbol){
@@ -198,6 +198,50 @@ PointExp.prototype = new RangeExp(); //RangeExp.prototype;
 
 PointExp.prototype._hydrate = function(m){
 
+		var hydratedObject = {
+				jsDate : new Date(m),
+				match : m.match(this.exp),
+				specificity : undefined,
+				specificityInt : 0,
+		}
+
+		for(index in DateExps.POINT_PARTS){	//Must go in-order
+
+			var part = DateExps.POINT_PARTS[index];
+			hydratedObject[part.name] = match[part.matchIndex];
+
+			//Go to the lowest possible specificity...
+			//Wait, while this is an allowable scenario, it's strange, how does it help us implement fuzzy?
+			//5 years and 3 days, makes sense; 5 years 3 days, 0 hours, 0 minutes, 0 seconds, 
+			//to 5 years, 3 days, 24 hours, 0 minutes, 0 seconds
+
+			//But year 2013, day 14... it doesn't make sense? It must follow a month.
+			if (!this[part.name] && !this.specificity){ 
+				this.specificity =  DateExps.POINT_PARTS[i-1].name;
+			}
+			if(this[part.name]){
+				this.specificity = undefined;//part.name; // At least as specific as this
+			}
+			//else{
+					var tryParse = this[part.name],
+						valueName = part.name.replace('Part', '');
+					if (tryParse) tryParse = tryParse.replace(':','').replace('-','');
+					//console.log(tryParse);
+				try{
+					this[valueName] = parseFloat(tryParse);
+					console.log(this[valueName]);
+					if(isNaN(this[valueName]) || this[valueName] == undefined || this[valueName]==null){throw new Exception();}
+				}
+				catch(e){
+					this[valueName]=0;
+					console.log('Could not parseFloat for: ' + part.name + ', value: ' + tryParse);
+				}
+
+			//}
+		}
+
+		return hydratedObject;
+
 };
 
 //Apply RangeExp's constructor?
@@ -235,61 +279,12 @@ DateExp = function(exp){
 	//Interval of time
 		//Ranged Interval of time
 
+	//Need a "router" to hand it to the right construction
+
 	this.isDuration = this.exp.match(DateExps.INTERVAL)				//
 					|| this.exp.match(DateExps.ISO_8601_DURATION);
 
-	if(this.isDuration){//exp.indexOf('->')>-1){
-		//var startAndEnd = exp.split('->');
-		//var isoMatch;
-			this.durationStart = new DateExp(this.isDuration[1]);
-			this.durationEnd = new DateExp(this.isDuration[2]);
-
-		}
-	else{
-		//See DateExp_UnitTests.js for reference to match 
-		this.expMatch8601 = this.exp.match(DateExps.ISO_8601_POINT);
-		//this.expMatch8601 = this.exp.match(DateExps.ISO_8601_POINT);
-		this.jsDate = new Date(this.exp);
-
-		specificityInt=0;
-		for(i in DateExps.POINT_PARTS){
-			var part = DateExps.POINT_PARTS[i];
-			//if(!this.expMatch8601){continue;}
-			this[part.name] = this.expMatch8601[part.match];
-
-			if (!this[part.name] && !this.specificity){ 
-				//Go to the lowest possible specificity...
-				//Wait, while this is an allowable scenario, it's strange, how does it help us implement fuzzy?
-				//5 years and 3 days, makes sense; 5 years 3 days, 0 hours, 0 minutes, 0 seconds, 
-				//to 5 years, 3 days, 24 hours, 0 minutes, 0 seconds
-
-				//But year 2013, day 14... it doesn't make sense? It must follow a month.
-				this.specificity =  DateExps.POINT_PARTS[i-1].name;
-			}
-			if(this[part.name]){
-				this.specificity = undefined;//part.name; // At least as specific as this
-			}
-			//else{
-					var tryParse = this[part.name],
-						valueName = part.name.replace('Part', '');
-					if (tryParse) tryParse = tryParse.replace(':','').replace('-','');
-					//console.log(tryParse);
-				try{
-					this[valueName] = parseFloat(tryParse);
-					console.log(this[valueName]);
-					if(isNaN(this[valueName]) || this[valueName] == undefined || this[valueName]==null){throw new Exception();}
-				}
-				catch(e){
-					this[valueName]=0;
-					console.log('Could not parseFloat for: ' + part.name + ', value: ' + tryParse);
-				}
-
-			//}
-		}
-
-
-	}
-		
+	
 
 
 			
