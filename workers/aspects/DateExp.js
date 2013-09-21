@@ -258,7 +258,12 @@ DateExp = function(exp){
 			this[part.name] = this.expMatch8601[part.match];
 
 			if (!this[part.name] && !this.specificity){ 
-				//Go to the lowest possible specificity
+				//Go to the lowest possible specificity...
+				//Wait, while this is an allowable scenario, it's strange, how does it help us implement fuzzy?
+				//5 years and 3 days, makes sense; 5 years 3 days, 0 hours, 0 minutes, 0 seconds, 
+				//to 5 years, 3 days, 24 hours, 0 minutes, 0 seconds
+
+				//But year 2013, day 14... it doesn't make sense? It must follow a month.
 				this.specificity =  DateExps.POINT_PARTS[i-1].name;
 			}
 			if(this[part.name]){
