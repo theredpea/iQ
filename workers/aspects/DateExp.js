@@ -14,28 +14,132 @@ DateExps.ISO_8601_POINT 	= new RegExp('^([\\+-]?\\d{4}(?!\\d{2}\\b))'+ 									
 									'([zZ]|([\\+-])([01]\\d|2[0-3]):?([0-5]\\d)?)?)?)?$');			// [21] z or Z for UTC or [22] +/-, [23]Hours offset, An optional colon, [24] Minutes Offset
 
 
-//The smallest value used can have a fractional version
-DateExps.ISO_8601_DURATION		= new RegExp('P(\d*\.\d*)*Y*(\d*\.\d*)*M*(\d*\.\d*)*D*(T(\d*\.\d*)*H*(\d*\.\d*)*M*(\d*\.\d*)*S*)*')
+//The smallest value used can have a fractional version 
+DateExps.ISO_8601_DURATION		= new RegExp('(P(\d*\.\d*)*Y*(\d*\.\d*)*M*(\d*\.\d*)*D*)(T(\d*\.\d*)*H*(\d*\.\d*)*M*(\d*\.\d*)*S*)*');
 DateExps.POINT;
-DateExps.SPAN 		= /->/;
-DateExps.RANGE 		= /((?:-=)|(?:=-)|(?:-)|(?:=))/;
-DateExps.DURATION 	= /([^(:->)]*)->([^(:->)]*)/;
+//DateExps.RANGE 		= /((?:-=)|(?:=-)|(?:-)|(?:=))/; Overkill
+//I'm going to co-opt my old INTERVAL symbol for the RANGE instead
+DateExps.RANGE = '->';
+//An Interval has a specified start and end date  
 
+//I thought to do a custom syntax; but Wikipedia describes something satisfactory  http://en.wikipedia.org/wiki/ISO_8601#Time_intervals
+//Which allows four ways to express a Duration, which is cool
+//Don't want to use Solidus, aka forward slash, in case these are stored in filenames
+
+//It doesn't have a notation to express whether the "bookends" should be included (inclusive) or not;
+//But that's a corner case
+//DateExps.INTERVAL 	= /([^(:->)]*)->([^(:->)]*)/;
+//DateExps.SPAN 		= /->/;
+
+//In summary:
+// 	(()->())
+//	(()->())--(()->())
 
 //http://my.safaribooksonline.com/book/programming/regular-expressions/9780596802837/4dot-validation-and-formatting/id2983571
 
-DateExps.PARTS  = [
+DateExps.POINT_PARTS  = [
 				{name:'yearPart', 		match:1},
 				{name:'monthPart', 		match:5},
 				{name:'dayPart', 		match:7},
 				{name:'hourPart', 		match:15},
 				{name:'minutePart', 	match:16},
 				{name:'secondPart', 	match:19}];
+
+DateExps.DURATION_PARTS  = [
+				//{name:'datePart', 		match:1},
+				{name:'yearPart', 		match:2},
+				{name:'monthPart', 		match:3},
+				{name:'dayPart', 		match:4},
+				//{name:'timePart', 		match:5},
+				{name:'hourPart', 		match:6},
+				{name:'minutePart', 	match:7},
+				{name:'secondPart', 	match:8}];
 				
+
+DateExps.RANGED = function(bookend, rangeSymbol){
+	if(!bookend) return;
+	rangeSymbol = rangeSymbol || DateExps.RANGE;
+
+	var optionalBookend = '('+bookend.source + ')*',
+		rangeString =  optionalBookend + rangeSymbol + optionalBookend,
+		rangeRegex = new RegExp(rangeString);
+		
+	return rangeRegex;
+
+
+};
+
+DateExps.MatchesExpOrExpRange = function(s, exp){
+
+	return s.match(exp) 							//Should have a length of 1; on part is at [0]
+			|| s.match(DateExps.RANGED(exp));		//Should have a length of 3; start and end parts are at [1] and [2]
+}
+
+RangeExp = function(s){
+	this._init(s);
+}
+
+RangeExp.prototype._init(){
+	//Invoke this base._init();
+	this.s=s;
+	this._getRange();
+	//Assign this.exp to whatever is appropriate, ISO_8601_DURATION
+
+};
+
+
+
+RangeExp.prototype._getRange(){
+
+	//Subclasses must establish
+	this.matches = DateExps.MatchesExpOrExpRange(this.s, this.exp);
+
+	if(!this.matches){
+		//Validation; alert message?
+	}
+	else if (this.matches.length>1){
+
+		this.startValue = this.matches[1];
+		this.endValue = this.matches[2];
+
+	} else if (this.matches.length==1){
+		this.onValue = this.matches[0];
+	} 
+
+	this.validate();
+}
+
+
+RangeExp.prototype.validate(){
+	//Validate start is less than end; allow subclasses to define "less"
+}
+
+
+
+PointExp = function(){}
+DurExp = function(){}
+InterExp = function(){}
+
 DateExp = function(exp){
 	this.exp = exp;
 
-	this.isDuration = this.exp.match(DateExps.DURATION);
+	//'Range of' is something that can be abstracted...
+	//Changes the properties from 'onDate' to 'startDate' and 'endDate'
+	//And the test from 'equals' to 'greater than', and/or 'less than'
+
+	//But the main flavor of their expression should be determined first
+
+	//Point in time
+		//Range of point in time
+
+	//Duration of time
+		//Range of duration of time
+
+	//Interval of time
+		//Ranged Interval of time
+
+	this.isDuration = this.exp.match(DateExps.INTERVAL)				//
+					|| this.exp.match(DateExps.ISO_8601_DURATION);
 
 	if(this.isDuration){//exp.indexOf('->')>-1){
 		//var startAndEnd = exp.split('->');
@@ -46,17 +150,17 @@ DateExp = function(exp){
 		}
 	else{
 		//See DateExp_UnitTests.js for reference to match 
-		this.expMatch8601 = this.exp.match(DateExps.ISO_8601_INDEX);
-		//this.expMatch8601 = this.exp.match(DateExps.ISO_8601_INDEX);
+		this.expMatch8601 = this.exp.match(DateExps.ISO_8601_POINT);
+		//this.expMatch8601 = this.exp.match(DateExps.ISO_8601_POINT);
 		this.jsDate = new Date(this.exp);
 
-		for(i in DateExps.PARTS){
-			var part = DateExps.PARTS[i];
+		for(i in DateExps.POINT_PARTS){
+			var part = DateExps.POINT_PARTS[i];
 			if(!this.expMatch8601){continue;}
 			this[part.name] = this.expMatch8601[part.match];
 
 			if (!this[part.name] && !this.specificity){ //Go to the lowest possible specificity
-				this.specificity =  DateExps.PARTS[i-1].name;
+				this.specificity =  DateExps.POINT_PARTS[i-1].name;
 			}
 			if(this[part.name]){
 				this.specificity = undefined;//part.name; // At least as specific as this

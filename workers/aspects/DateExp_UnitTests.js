@@ -75,32 +75,54 @@ theadrow.appendChild(iQ.el('th'))
 tbody = iQ.el('tbody');
 */
 
+//TODO Separate table for Durations?
 var tbody=iQ.first('#tbody');
 tbody.innerHTML='';
+
 shouldWork.concat(shouldNotWork).forEach(function(e,i,a){
 	var should=false,
 		fail=false;
+
 	if (i<shouldWork.length) should=true;
 
-	//console.log(e.match(DateExps.ISO_8601_INDEX));
-	if (should) { if (!DateExps.ISO_8601_INDEX.test(e)) {console.log('false negative with ' + e); fail=true;}}
-	else { if (DateExps.ISO_8601_INDEX.test(e)) {console.log('false positive with ' + e); fail=true;} }
+	if (should) { 
+		if (!DateExps.ISO_8601_POINT.test(e)) {
+			console.log('false negative with ' + e); fail=true;}}
+	else { 
+		if (DateExps.ISO_8601_POINT.test(e)) {
+			console.log('false positive with ' + e); fail=true;} }
 
-	match = e.match(DateExps.ISO_8601_INDEX);
-	matchLength = match ? match.length : 0;
-	matchString = match ? match.join(',') : '';
-	
-	dateExp = new DateExp(e);
-	matchString = DateExps.PARTS.map(function(e,i,a){ return dateExp[e.name.replace('Part','')]; }).join(',');
-	isoString = 'false';
-	try{isoString=dateExp.jsDate.toISOString(); } catch(e){}
-	tbody.innerHTML+='<tr class="'+isoString+'"><td>'+e+'</td><td>'+matchLength+'</td><td>'+matchString+'</td><td>'+(fail?'Fail':'Pass')+'</td><td>'+isoString+'</td><td>'+dateExp.specificity+'</td></tr>'
+	var match = e.match(DateExps.ISO_8601_POINT),
+		matchLength = match ? match.length : 0,
+		//matchString = match ? match.join(',') : '',
+		dateExp = new DateExp(e),
+		isoString = 'false',
+		passFailString = fail ? 'fail': 'pass',
+		matchString = DateExps.POINT_PARTS.map(function(e,i,a){ 
+				return dateExp[e.name.replace('Part','')]; }).join(',');
+
+	try{isoString=dateExp.jsDate.toISOString(); } 
+		catch(e){}
+	tbody.innerHTML+='<tr class="'+ isoString +' '+ passFailString +'"><td>'+e+'</td><td>'+matchLength+'</td><td>'+matchString+'</td><td class="pass-fail">'+passFailString+'</td><td>'+isoString+'</td><td>'+dateExp.specificity+'</td></tr>'
 });
+
+duration = {
+
+}
+duration.shouldWork = ['P2013'];
+duration.shouldNotWork = [];
+duration.test = function(){
+	duration.shouldWork.forEach(function(e,i,a){
+
+		var match = e.match(DateExps.ISO_8601_DURATION)
+	});
+}
+
 /*
 shouldNotWork.forEach(function(e,i,a){
 
-	//console.log(e.match(DateExps.ISO_8601_INDEX));
-	if (DateExps.ISO_8601_INDEX.test(e)) console.log('false positive with ' + e);
+	//console.log(e.match(DateExps.ISO_8601_POINT));
+	if (DateExps.ISO_8601_POINT.test(e)) console.log('false positive with ' + e);
 });
 */
 
