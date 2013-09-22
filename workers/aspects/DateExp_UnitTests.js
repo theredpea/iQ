@@ -95,7 +95,7 @@ shouldWork.concat(shouldNotWork).forEach(function(e,i,a){
 	var match = e.match(DateExps.ISO_8601_POINT),
 		matchLength = match ? match.length : 0,
 		//matchString = match ? match.join(',') : '',
-		dateExp = new DateExp(e),
+		dateExp = new DateExp(e, 'f'),
 		isoString = 'false',
 		passFailString = fail ? 'fail': 'pass',
 		partsList =[],

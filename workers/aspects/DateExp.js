@@ -99,6 +99,7 @@ RangeExp.prototype._init = function(s, options){
 	//Assign this.exp to whatever is appropriate, ISO_8601_DURATION
 	this._validateState();
 };
+
 RangeExp.prototype._parseOptions = function(){
 	if (this.optionString){
 		this.options.fuzzy = this.optionString.indexOf('f')>-1;
@@ -140,9 +141,11 @@ RangeExp.prototype._setProperties = function(){
 
 	} else if (this.matches.length==1){
 
-		if (this._isFuzzy(this.matches[0])) {	 //Fuzzy are implicit ranges
-				this.startValue = this._hydrateFuzzyStart(this.matches[0]);
-				this.endValue = this._hydrateFuzzyEnd(this.matches[0]);
+		var hydratedObject = this._hydrate(this.matches[0]);
+
+		if (this._isFuzzy(hydratedObject)){ //this.matches[0])) {	 //Fuzzy are implicit ranges
+				this.startValue = this._hydrateFuzzyStart(hydratedObject);//this.matches[0]);
+				this.endValue = this._hydrateFuzzyEnd(hydratedObject);//this.matches[0]);
 
 				if (this.startValue && this.endValue) this.hydrated = true;
 
@@ -151,7 +154,7 @@ RangeExp.prototype._setProperties = function(){
 		}
 		else{
 
-			this.onValue = this._hydrate(this.matches[0]);
+			this.onValue = hydratedObject; //= this._hydrate(this.matches[0]);
 
 			if (this.onValue) this.hydrated = true;
 
@@ -162,12 +165,13 @@ RangeExp.prototype._setProperties = function(){
 
 };
 
-RangeExp.prototype._isFuzzy = function(m){
+RangeExp.prototype._isFuzzy = function(hydratedObject){//m){
 		//Theoretically we should use the second clause;
 		//In this generic case now I can either give 'm' an actual specificityInt, making m an object and making native > or < comparison pretty lame
 		//Or let specificityInt remain undefined
 		//Since I'd have to make an arbitrary decision in the first case...
-		return this.options.fuzzy && (this._hydrate(m).specificityInt < this.maxSpecificityInt);
+
+		return this.options.fuzzy && (hydratedObject && hydratedObject.specificityInt < this.maxSpecificityInt);
 };
 
 
@@ -226,12 +230,20 @@ PointExp = function(s, options){
 	this.parts = DateExps.POINT_PARTS; //Establish at this point
 	//TODO:Extract options, or make that its own method?
 
-	this.constructor.apply(this, [s, options]);//arguments);
+	this.constructor.apply(this, [s, options]);
 };
 
 //Inheritance
 PointExp.prototype = new RangeExp();
 
+
+PointExp.prototype._betweenStartAndEndValue = function(){
+
+};
+
+PointExp.prototype._equalsOnValue = function(){
+
+};
 
 //TODO: Instead of making this extensible by a "brother" class; DurExp
 //Build this as default implementation;
@@ -288,23 +300,54 @@ PointExp.prototype._hydrate = function(m, parts){
 			try{
 				hydratedObject[valueName] = parseFloat(tryParse);
 
-				if(!hydratedObject[valueName]){	throw new Exception();	}
+				if(!hydratedObject[valueName])
+					throw {name: valueName, value: hydratedObject[valueName], message:'ParseException'};//!(parseFloat)'};
 			}
 			catch(e){
-				hydratedObject[valueName]=0;
-				//Any other reasons for exception?
-				//TODO: Maybe better to pack this reason into my custom Exception, so this message isn't vague, like "or"
-				console.log('Could not parseFloat (or else it produced NaN, undefined, null...) for name:\n\t' + 
-								part.name + '\nvalue:\n\t' + tryParse);
+				hydratedObject[valueName]=-1;
+				//console.log(e.message); 
+				//'Could not parseFloat (or else it produced NaN, undefined, null...) for name:\n\t' + 
+				//				part.name + '\nvalue:\n\t' + tryParse);
 			}
 
 		}
 		hydratedObject.partsList = parts.map(function(e,i,a){ 
-				return hydratedObject[e.name.replace('Part','')]; });
+				return hydratedObject[DateExps.DePartName(e)]; });
 
 		return hydratedObject;
 
 };
+
+DateExps.DePartName = function (e) {
+	return e.name.replace('Part','');
+}
+
+PointExp.prototype._hydrateFuzzyStart = function(hydratedObject, parts){
+	//var hydratedObject = this._hydrate(m);
+	parts = this.parts || parts || DateExp.POINT_PARTS;
+
+				console.log('fuzzy');
+	for (part in parts){
+			if (hydratedObject[DateExps.DePartName(part)] == -1){
+				console.log('fuzzy');
+			}
+	}
+	return hydratedObject;
+
+
+};
+PointExp.prototype._hydrateFuzzyEnd = function(hydratedObject, parts){
+	//var hydratedObject = this._hydrate(m);
+	parts = this.parts || parts || DateExp.POINT_PARTS;
+
+	for (part in this.parts){
+			
+	}
+
+	return hydratedObject;
+
+};
+
 
 //Apply RangeExp's constructor?
 DurExp = function(s, options){ 
