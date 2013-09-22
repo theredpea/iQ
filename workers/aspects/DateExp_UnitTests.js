@@ -102,21 +102,25 @@ shouldWork.concat(shouldNotWork).forEach(function(e,i,a){
 		passFailString = fail ? 'fail': 'pass',
 		partsList =[],
 		specificity = '--',
-		specificityInt = 0;
+		specificityInt = 0,
+		shouldString = should ? 'Should': 'Not',
+		onValue = (dateExp.onValue || dateExp.fuzzyOnValue);
 
-	if (dateExp.onValue){
-		partsList = dateExp.onValue.partsList; 	//Using onValue
-		specificity = dateExp.onValue.specificity,
-		specificityInt = dateExp.onValue.specificityInt
+	if (onValue){
+		partsList = 		dateExp.startValue.partsList; //onValue.partsList; 	//Using onValue
+		specificity = 		onValue.specificity,
+		specificityInt = 	onValue.specificityInt
 	}
 
 	try{isoString=dateExp.onValue.jsDate.toISOString(); } 
 		catch(e){}
-	tbody.innerHTML+='<tr class="'+ isoString +' '+ passFailString + '"><td>'+e+
+	tbody.innerHTML+='<tr class="'+ isoString +' '+ passFailString + '"><td class="'+shouldString+'">'+shouldString+
+								'</td><td>'+e+
 								'</td><td>'+matchLength+
 								'</td><td>'+partsList.join(',')+
-								'</td><td class="pass-fail">'+passFailString+
+								'</td><td class="pass-fail">'+passFailString+ 
 								'</td><td>'+isoString+
+								'</td><td>'+specificityInt+
 								'</td><td>'+specificity+
 								'</td></tr>';
 

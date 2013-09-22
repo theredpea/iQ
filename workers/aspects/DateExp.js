@@ -92,7 +92,7 @@ RangeExp = function(s, options){
 RangeExp.prototype._init = function(s, options){
 	//Invoke this base._init();
 	this.s=s;
-	//this.maxSpecificityInt=-1;
+	//this.maxSpecificityInt=-1; But I couldn't override it
 	this.optionString=options;
 	this.options={};
 	this._parseOptions();//options);
@@ -145,6 +145,9 @@ RangeExp.prototype._setProperties = function(){
 		var hydratedObject = this._hydrate(this.matches[0]);
 
 		if (this._isFuzzy(hydratedObject)){ //this.matches[0])) {	 //Fuzzy are implicit ranges
+
+				this.fuzzyOnValue = this._hydrate(this.matches[0]);
+
 				this.startValue = this._hydrateFuzzyStart(hydratedObject);//this.matches[0]);
 				this.endValue = this._hydrateFuzzyEnd(hydratedObject);//this.matches[0]);
 
@@ -171,7 +174,7 @@ RangeExp.prototype._isFuzzy = function(hydratedObject){//m){
 		//In this generic case now I can either give 'm' an actual specificityInt, making m an object and making native > or < comparison pretty lame
 		//Or let specificityInt remain undefined
 		//Since I'd have to make an arbitrary decision in the first case...
-		second =(hydratedObject && hydratedObject.specificityInt >= this.maxSpecificityInt);
+		second =(hydratedObject && hydratedObject.specificityInt < this.maxSpecificityInt);
 		result = this.options.fuzzy && second;
 
 		//console.log(this.maxSpecificityInt);
@@ -193,7 +196,7 @@ RangeExp.prototype._hydrate = function(m){
 
 RangeExp.prototype._hydrateFuzzyStart = function(m){
 	//Hard to imagine a generic case for hydrateFuzzyStart, even if the expressions were strings	
-	console.log('Range hydrateFuzzyStart');
+	//console.log('Range hydrateFuzzyStart');
 	return m;
 };
 RangeExp.prototype._hydrateFuzzyEnd = function(m){
@@ -240,8 +243,8 @@ PointExp = function(s, options){
 	this.parts = DateExps.POINT_PARTS; //Establish at this point
 	//TODO:Extract options, or make that its own method?
 
-	//Override
-	this.maxSpecificityInt=1;
+	//Override when needed?
+	this.maxSpecificityInt=6;
 
 	this.constructor.apply(this, [s, options]);
 
@@ -279,15 +282,21 @@ PointExp.prototype._setSpecificity = function(hydratedObject, currentName, previ
 PointExp.prototype._hydrate = function(m, parts){
 
 
-		var hydratedObject = {
-				jsDate 			: new Date(m),
-				match 			: this.s.match(this.exp), //m.match(this.exp),
-				specificity 	: undefined,
-				specificityInt 	: 0
-			},
-			specificityInt = 0,
-			parts = this.parts || parts || DateExps.POINT_PARTS;
-
+		var specificityInt = 0,//-1, Because maxSpecificytInt is set to 1;
+			parts = this.parts || parts || DateExps.POINT_PARTS,
+			hydratedObject = {
+							jsDate 			: new Date(m),
+							match 			: this.s.match(this.exp), //m.match(this.exp),
+							specificity 	: undefined,
+							specificityInt 	: specificityInt,
+							parts 			: parts,
+							exp 			: m,
+							//https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Working_with_Objects?redirectlocale=en-US&redirectslug=JavaScript%2FGuide%2FWorking_with_Objects#Defining_getters_and_setters
+							get partsList()  { return this.parts.map(function(part,i,a){ 
+													//So that if they are deFuzzied, and assigned default values, they show
+													return hydratedObject[DateExps.DePartName(part)]; }); 
+							}
+						};
 
 		for(index in parts){	//Must go in-order, because specificity rules apply
 
@@ -297,9 +306,9 @@ PointExp.prototype._hydrate = function(m, parts){
 
 			hydratedObject[currentName] = hydratedObject.match[part.matchIndex];
 			
-			specificityInt++;
 			this._setSpecificity(hydratedObject, currentName, previousName, specificityInt);
 
+			specificityInt++;
 
 			//Use 'Part' to represent the raw value of the match, like 'yearPart' represents the string '2013', 
 				//or maybe even '2013-', depending on the regex; totally unprocessed
@@ -326,27 +335,44 @@ PointExp.prototype._hydrate = function(m, parts){
 			}
 
 		}
-		hydratedObject.partsList = parts.map(function(e,i,a){ 
-				return hydratedObject[DateExps.DePartName(e)]; });
+		
 
 		return hydratedObject;
 
 };
 
 DateExps.DePartName = function (e) {
-	return e.name.replace('Part','');
+	name = e.name ? e.name : (e ? e : '');
+
+	return name.replace('Part','');
 }
 
+///HydrateFuzzyStart is also used for a vague date... depending on whether it's start or end?
 PointExp.prototype._hydrateFuzzyStart = function(hydratedObject, parts){
 	//var hydratedObject = this._hydrate(m);
-	parts = this.parts || parts || DateExp.POINT_PARTS;
+	var parts = this.parts || parts || DateExp.POINT_PARTS,
+		deFuzzied=0,
+		partName;
 
-				console.log('fuzzy');
-	for (part in parts){
-			if (hydratedObject[DateExps.DePartName(part)] == -1){
-				console.log('fuzzy');
+
+
+	//
+	for (i=hydratedObject.specificityInt; i<parts.length; i++){
+		part = parts[i];
+		partName = DateExps.DePartName(part);
+		//console.log(partName);
+		//console.log(hydratedObject[partName]);
+			//Interesting example: "2009-12T12:34"
+			//Notice how it has two fuzzieds
+			if (hydratedObject[partName] == -1){
+				deFuzzied++;
+				hydratedObject[partName]=1;	
 			}
 	}
+
+	//console.log(fuzzied);
+	//console.log(hydratedObject);
+	//console.log(this.exp);
 	return hydratedObject;
 
 

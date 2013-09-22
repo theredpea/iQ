@@ -7,6 +7,9 @@
 		font-family:sans-serif;
 		font-size:1.25em;
 	}
+		table{
+			width:100%;
+		}
 
 		tr,
 		tr td{
@@ -28,6 +31,16 @@
 			background-color:green;
 			color:white;
 		}
+
+		table tbody tr td.Should{
+			background-color:blue;
+			color:white;
+		}
+		table tbody tr td.Not{
+			background-color:black;
+			color:white;
+		}
+
 	</style>
 	
 	<!--
@@ -38,12 +51,14 @@
 		<table>
 			<thead>
 					<tr>
+						<th>+/-</th>
 						<th>Expression</th>
 						<th>Match Count</th>
 						<th>Matches</th>
 						<th>Pass/Fail</th>
 						<th>DateExp.JsDate</th>
-						<th>DateExp.Specificity</th>
+						<th>SpecificityInt</th>
+						<th>Specificity</th>
 					</tr>
 			</thead>
 			<tbody id="tbody">
