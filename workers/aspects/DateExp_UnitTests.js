@@ -107,12 +107,12 @@ shouldWork.concat(shouldNotWork).forEach(function(e,i,a){
 		onValue = (dateExp.onValue || dateExp.fuzzyOnValue);
 
 	if (onValue){
-		partsList = 		dateExp.startValue.partsList; //onValue.partsList; 	//Using onValue
+		partsList = 		dateExp.endValue.partsList; //onValue.partsList; 	//Using onValue
 		specificity = 		onValue.specificity,
 		specificityInt = 	onValue.specificityInt
 	}
 
-	try{isoString=dateExp.onValue.jsDate.toISOString(); } 
+	try{isoString=onValue.jsDate.toISOString(); } 
 		catch(e){}
 	tbody.innerHTML+='<tr class="'+ isoString +' '+ passFailString + '"><td class="'+shouldString+'">'+shouldString+
 								'</td><td>'+e+

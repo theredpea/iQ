@@ -72,6 +72,16 @@ DateExps.RANGED = function(bookend, rangeSymbol){
 
 };
 
+DateExps.Clone = function (obj) {
+    if (null == obj || "object" != typeof obj) return obj;
+    var copy = obj.constructor();
+    for (var attr in obj) {
+        if (obj.hasOwnProperty(attr)) copy[attr] = obj[attr];
+    }
+    return copy;
+}
+
+
 DateExps.MatchesExpOrExpRange = function(s, exp, rangeSymbol){
 
 	return s.match(DateExps.RANGED(exp, rangeSymbol)) || s.match(exp); 							//Should have a length of 1; on part is at [0]
@@ -148,8 +158,8 @@ RangeExp.prototype._setProperties = function(){
 
 				this.fuzzyOnValue = this._hydrate(this.matches[0]);
 
-				this.startValue = this._hydrateFuzzyStart(hydratedObject);//this.matches[0]);
-				this.endValue = this._hydrateFuzzyEnd(hydratedObject);//this.matches[0]);
+				this.startValue = this._hydrateFuzzyStart(DateExps.Clone(hydratedObject));//this.matches[0]);
+				this.endValue = this._hydrateFuzzyEnd(DateExps.Clone(hydratedObject));//this.matches[0]);
 
 				if (this.startValue && this.endValue) this.hydrated = true;
 
@@ -284,6 +294,14 @@ PointExp.prototype._hydrate = function(m, parts){
 
 		var specificityInt = 0,//-1, Because maxSpecificytInt is set to 1;
 			parts = this.parts || parts || DateExps.POINT_PARTS,
+			endMap = {
+				'year':0,	//Crazy
+				'month':12,
+				'day':0,	//Depends. Damn.
+				'hour':24,
+				'minute':59,
+				'second':59
+			}
 			hydratedObject = {
 							jsDate 			: new Date(m),
 							match 			: this.s.match(this.exp), //m.match(this.exp),
@@ -292,9 +310,11 @@ PointExp.prototype._hydrate = function(m, parts){
 							parts 			: parts,
 							exp 			: m,
 							//https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Working_with_Objects?redirectlocale=en-US&redirectslug=JavaScript%2FGuide%2FWorking_with_Objects#Defining_getters_and_setters
-							get partsList()  { return this.parts.map(function(part,i,a){ 
-													//So that if they are deFuzzied, and assigned default values, they show
-													return hydratedObject[DateExps.DePartName(part)]; }); 
+							get partsList()  { 	var that = this; 
+
+													return that.parts.map(function(part,i,a){ 
+														//So that if they are deFuzzied, and assigned default values, they show
+														return that[DateExps.DePartName(part)]; }); 
 							}
 						};
 
@@ -347,9 +367,7 @@ DateExps.DePartName = function (e) {
 	return name.replace('Part','');
 }
 
-///HydrateFuzzyStart is also used for a vague date... depending on whether it's start or end?
-PointExp.prototype._hydrateFuzzyStart = function(hydratedObject, parts){
-	//var hydratedObject = this._hydrate(m);
+PointExp.prototype._hydrateFuzzy = function(hydratedObject, hydrateFunc, parts){
 	var parts = this.parts || parts || DateExp.POINT_PARTS,
 		deFuzzied=0,
 		partName;
@@ -364,10 +382,7 @@ PointExp.prototype._hydrateFuzzyStart = function(hydratedObject, parts){
 		//console.log(hydratedObject[partName]);
 			//Interesting example: "2009-12T12:34"
 			//Notice how it has two fuzzieds
-			if (hydratedObject[partName] == -1){
-				deFuzzied++;
-				hydratedObject[partName]=1;	
-			}
+			hydrateFunc(hydratedObject, partName);
 	}
 
 	//console.log(fuzzied);
@@ -375,18 +390,57 @@ PointExp.prototype._hydrateFuzzyStart = function(hydratedObject, parts){
 	//console.log(this.exp);
 	return hydratedObject;
 
+}
+///HydrateFuzzyStart is also used for a vague date... depending on whether it's start or end?
+PointExp.prototype._hydrateFuzzyStart = function(hydratedObject, parts){
+
+	var deFuzzied =0,
+		fuzzyStart =function(hydratedObject, partName){
+			if (hydratedObject[partName] == -1){
+				deFuzzied++;
+				hydratedObject[partName]=1;	
+			}
+	};
+
+	return this._hydrateFuzzy(hydratedObject, fuzzyStart);
+
 
 };
 PointExp.prototype._hydrateFuzzyEnd = function(hydratedObject, parts){
 	//var hydratedObject = this._hydrate(m);
-	parts = this.parts || parts || DateExp.POINT_PARTS;
+	
+	var deFuzzied =0,
+		jsMap = {'day':'date'}, //Javascript's getDate returns what I call the dayPart
+		fuzzyEnd =function(hydratedObject, partName){
+			var m = hydratedObject.jsDate.valueOf();
+			hydratedObject.jsDateSecondBack = new Date(m-1000);	//One second back, else we'll stay in the same second!
 
-	for (part in this.parts){
-			
-	}
+			if (hydratedObject[partName] == -1){
+				var newPartName = partName;
+				if (newPartName in jsMap) newPartName = jsMap[newPartName];
 
-	return hydratedObject;
+				var titlePartName = newPartName.substring(0,1).toUpperCase() + newPartName.substring(1),
+					getPart = 'get'+titlePartName,
+					getParts = getPart +'s',
+					monthAdjusted = false;
 
+
+				if (hydratedObject.jsDateSecondBack[getPart]){
+					deFuzzied++;
+					hydratedObject[partName] = hydratedObject.jsDateSecondBack[getPart]();
+
+				} else if (hydratedObject.jsDateSecondBack[getParts]){
+					deFuzzied++;
+					hydratedObject[partName] = hydratedObject.jsDateSecondBack[getParts]();
+
+				}
+				if(partName=='month'){	// && monthAdjusted){
+					hydratedObject[partName]++; //Because it's 0-indexed
+				}
+			}
+	};
+	console.log('fuzzyEnd');
+	return this._hydrateFuzzy(hydratedObject, fuzzyEnd);
 };
 
 
