@@ -60,9 +60,10 @@ DateExps.RANGE = '->';
 
 DateExps.RANGED = function(bookend, rangeSymbol){
 	if(!bookend) return;
-	rangeSymbol = rangeSymbol || DateExps.RANGE;
+	rangeSymbol = rangeSymbol || DateExps.RANGE;			//Can override DateExpsRange default
+	bookend = bookend.source ? bookend.source : bookend; 	//Can use a regex, or a string
 
-	var optionalBookend = '('+bookend.source + ')*',
+	var optionalBookend = '('+ bookend + ')*',
 		rangeString =  optionalBookend + rangeSymbol + optionalBookend,
 		rangeRegex = new RegExp(rangeString);
 		
@@ -118,7 +119,7 @@ RangeExp.prototype._setProperties = function(){
 
 		//User does not provide, isntead, Developer / Class provides:
 			//this.maxSpecificity; 	// Complements the idea of fuzzy
-	this.matches = DateExps.MatchesExpOrExpRange(this.s, this.exp, this.rangeSymbol);
+	this.matches = this.s.match(DateExps.RANGED(/\./))//DateExps.MatchesExpOrExpRange(this.s, this.exp, this.rangeSymbol);
 
 	if(!this.matches){
 		//Validation; alert message?
@@ -238,7 +239,7 @@ PointExp.prototype._hydrate = function(m, parts){
 
 		var hydratedObject = {
 				jsDate : new Date(m),
-				match : m.match(this.exp),
+				match : this.s.match(this.exp), //m.match(this.exp),
 				specificity : undefined,
 				specificityInt : 0
 			},
@@ -350,11 +351,13 @@ DateExp = function(s, options){
 
 	//Need a "router" to hand it to the right construction
 
+	var pointMatch = DateExps.MatchesExpOrExpRange(s, DateExps.ISO_8601_POINT),
+		durMatch = DateExps.MatchesExpOrExpRange(s, DateExps.ISO_8601_DURATION);
 
-	if(DateExps.MatchesExpOrExpRange(s, DateExps.ISO_8601_POINT).length>-1){
+	if(pointMatch && pointMatch.length>-1){
 		this.exp = new PointExp(s, options);
 	}
-	else if(DateExps.MatchesExpOrExpRange(s, DateExps.ISO_8601_DURATION).length>-1){
+	else if(durMatch && durMatch.length>-1){
 		this.exp = new DurExp(s, options);
 
 	}
