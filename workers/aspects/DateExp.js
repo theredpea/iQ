@@ -92,6 +92,7 @@ RangeExp = function(s, options){
 RangeExp.prototype._init = function(s, options){
 	//Invoke this base._init();
 	this.s=s;
+	//this.maxSpecificityInt=-1;
 	this.optionString=options;
 	this.options={};
 	this._parseOptions();//options);
@@ -126,7 +127,7 @@ RangeExp.prototype._setProperties = function(){
 		//User does not provide, isntead, Developer / Class provides:
 			//this.maxSpecificity; 	// Complements the idea of fuzzy
 	this.matches = DateExps.MatchesExpOrExpRange(this.s, /.*(?!->)/)//DateExps.MatchesExpOrExpRange(this.s, this.exp, this.rangeSymbol);
-
+	
 	if(!this.matches){
 		//Validation; alert message?
 	}
@@ -170,8 +171,15 @@ RangeExp.prototype._isFuzzy = function(hydratedObject){//m){
 		//In this generic case now I can either give 'm' an actual specificityInt, making m an object and making native > or < comparison pretty lame
 		//Or let specificityInt remain undefined
 		//Since I'd have to make an arbitrary decision in the first case...
+		second =(hydratedObject && hydratedObject.specificityInt >= this.maxSpecificityInt);
+		result = this.options.fuzzy && second;
 
-		return this.options.fuzzy && (hydratedObject && hydratedObject.specificityInt < this.maxSpecificityInt);
+		//console.log(this.maxSpecificityInt);
+		//console.log(second);
+		//console.log('--');
+		//console.log(this.options.fuzzy);
+		//console.log(result);
+		return result;
 };
 
 
@@ -179,11 +187,13 @@ RangeExp.prototype._isFuzzy = function(hydratedObject){//m){
 			//specificityInt; int representing the "level"
 			//specificity; string representing the "level"
 RangeExp.prototype._hydrate = function(m){
+	console.log('Range hydrate');
 	return m;
 };
 
 RangeExp.prototype._hydrateFuzzyStart = function(m){
 	//Hard to imagine a generic case for hydrateFuzzyStart, even if the expressions were strings	
+	console.log('Range hydrateFuzzyStart');
 	return m;
 };
 RangeExp.prototype._hydrateFuzzyEnd = function(m){
@@ -230,7 +240,12 @@ PointExp = function(s, options){
 	this.parts = DateExps.POINT_PARTS; //Establish at this point
 	//TODO:Extract options, or make that its own method?
 
+	//Override
+	this.maxSpecificityInt=1;
+
 	this.constructor.apply(this, [s, options]);
+
+	
 };
 
 //Inheritance
