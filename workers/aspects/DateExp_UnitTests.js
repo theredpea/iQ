@@ -98,13 +98,27 @@ shouldWork.concat(shouldNotWork).forEach(function(e,i,a){
 		dateExp = new DateExp(e),
 		isoString = 'false',
 		passFailString = fail ? 'fail': 'pass',
-		matchString = DateExps.POINT_PARTS.map(function(e,i,a){ 
-				return dateExp[e.name.replace('Part','')]; }).join(',');
+		partsList =[],
+		specificity = '--',
+		specificityInt = 0;
 
-	try{isoString=dateExp.jsDate.toISOString(); } 
+	if (dateExp.onValue){
+		partsList = dateExp.onValue.partsList; 	//Using onValue
+		specificity = dateExp.onValue.specificity,
+		specificityInt = dateExp.onValue.specificityInt
+	}
+
+	try{isoString=dateExp.onValue.jsDate.toISOString(); } 
 		catch(e){}
-	tbody.innerHTML+='<tr class="'+ isoString +' '+ passFailString +'"><td>'+e+'</td><td>'+matchLength+'</td><td>'+matchString+'</td><td class="pass-fail">'+passFailString+'</td><td>'+isoString+'</td><td>'+dateExp.specificity+'</td></tr>'
-});
+	tbody.innerHTML+='<tr class="'+ isoString +' '+ passFailString + '"><td>'+e+
+								'</td><td>'+matchLength+
+								'</td><td>'+partsList.join(',')+
+								'</td><td class="pass-fail">'+passFailString+
+								'</td><td>'+isoString+
+								'</td><td>'+specificity+
+								'</td></tr>';
+
+}); 
 
 duration = {
 

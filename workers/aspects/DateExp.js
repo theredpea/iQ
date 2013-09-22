@@ -74,9 +74,14 @@ DateExps.RANGED = function(bookend, rangeSymbol){
 
 DateExps.MatchesExpOrExpRange = function(s, exp, rangeSymbol){
 
-	return s.match(exp) 							//Should have a length of 1; on part is at [0]
-			|| s.match(DateExps.RANGED(exp, rangeSymbol));		//Should have a length of 3; start and end parts are at [1] and [2]
+	return s.match(DateExps.RANGED(exp, rangeSymbol)) || s.match(exp); 							//Should have a length of 1; on part is at [0]
+					//Should have a length of 3; start and end parts are at [1] and [2]
 }
+
+
+//'Range of' is something that can be abstracted...
+//Changes the properties from 'onDate' to 'startDate' and 'endDate'
+//And the test from 'equals' to 'greater than', and/or 'less than'
 
 RangeExp = function(s, options){
 	//Allow assigning prototypes to a new RangeExp(), without passing an argument
@@ -119,7 +124,7 @@ RangeExp.prototype._setProperties = function(){
 
 		//User does not provide, isntead, Developer / Class provides:
 			//this.maxSpecificity; 	// Complements the idea of fuzzy
-	this.matches = this.s.match(DateExps.RANGED(/\./))//DateExps.MatchesExpOrExpRange(this.s, this.exp, this.rangeSymbol);
+	this.matches = DateExps.MatchesExpOrExpRange(this.s, /.*(?!->)/)//DateExps.MatchesExpOrExpRange(this.s, this.exp, this.rangeSymbol);
 
 	if(!this.matches){
 		//Validation; alert message?
@@ -129,7 +134,9 @@ RangeExp.prototype._setProperties = function(){
 		this.startValue = this._hydrate(this.matches[1]);
 		this.endValue = this._hydrate(this.matches[2]);
 
-		this.testFunc = this._betweenStartAndEndValue;
+		if (this.startValue && this.endValue) this.hydrated = true;
+
+		this.test = this._betweenStartAndEndValue;
 
 	} else if (this.matches.length==1){
 
@@ -137,13 +144,18 @@ RangeExp.prototype._setProperties = function(){
 				this.startValue = this._hydrateFuzzyStart(this.matches[0]);
 				this.endValue = this._hydrateFuzzyEnd(this.matches[0]);
 
-				this.testFunc = this._betweenStartAndEndValue;
+				if (this.startValue && this.endValue) this.hydrated = true;
+
+				this.test = this._betweenStartAndEndValue;
 
 		}
 		else{
 
 			this.onValue = this._hydrate(this.matches[0]);
-			this.testFunc = this._equalsOnValue;
+
+			if (this.onValue) this.hydrated = true;
+
+			this.test = this._equalsOnValue;
 		}
 
 	}
@@ -179,13 +191,16 @@ RangeExp.prototype._hydrateFuzzyEnd = function(m){
 //But fuzzy logic is inherently saying you're so vague (unspecific) it's a range;
 
 RangeExp.prototype._equalsOnValue = function(testObj, optionalComparisonObject){
-		return testObj == (optionalComparisonObject || this.onValue);
+		return this.hydrated
+				&& testObj == (optionalComparisonObject || this.onValue);
 
 };
 
 RangeExp.prototype._betweenStartAndEndValue = function(testObj){
 		//Allows the user to omit start or end value, an open-ended range
-		return (!this.startValue || this._greaterThan(testObj, this.startValue)) 
+
+		return this.hydrated
+				&& (!this.startValue || this._greaterThan(testObj, this.startValue)) 
 				&& (!this.endValue || this._lessThan(testObj, this.endValue));
 };
 
@@ -202,8 +217,6 @@ RangeExp.prototype._lessThan = function(a, b){
 
 
 
-
-
 PointExp = function(s, options){ 
 
 			//this.exp;
@@ -216,7 +229,9 @@ PointExp = function(s, options){
 	this.constructor.apply(this, [s, options]);//arguments);
 };
 
-PointExp.prototype = new RangeExp(); //RangeExp.prototype;
+//Inheritance
+PointExp.prototype = new RangeExp();
+
 
 //TODO: Instead of making this extensible by a "brother" class; DurExp
 //Build this as default implementation;
@@ -238,13 +253,13 @@ PointExp.prototype._hydrate = function(m, parts){
 
 
 		var hydratedObject = {
-				jsDate : new Date(m),
-				match : this.s.match(this.exp), //m.match(this.exp),
-				specificity : undefined,
-				specificityInt : 0
+				jsDate 			: new Date(m),
+				match 			: this.s.match(this.exp), //m.match(this.exp),
+				specificity 	: undefined,
+				specificityInt 	: 0
 			},
 			specificityInt = 0,
-			parts = this.parts || parts  || DateExps.POINT_PARTS;
+			parts = this.parts || parts || DateExps.POINT_PARTS;
 
 
 		for(index in parts){	//Must go in-order, because specificity rules apply
@@ -284,6 +299,8 @@ PointExp.prototype._hydrate = function(m, parts){
 			}
 
 		}
+		hydratedObject.partsList = parts.map(function(e,i,a){ 
+				return hydratedObject[e.name.replace('Part','')]; });
 
 		return hydratedObject;
 
@@ -331,36 +348,39 @@ InterExp.prototype = RangeExp.prototype;
 
 //Encompasses all three, PointExp, DurExp, InterExp
 DateExp = function(s, options){
-	//this.s = s;
-	//this.optionString = options;
+	this.s = s;
+	this.optionString = options;
 
-	//'Range of' is something that can be abstracted...
-	//Changes the properties from 'onDate' to 'startDate' and 'endDate'
-	//And the test from 'equals' to 'greater than', and/or 'less than'
 
-	//But the main flavor of their expression should be determined first
 
-	//Point in time
-		//Range of point in time
 
-	//Duration of time
-		//Range of duration of time
-
-	//Interval of time
-		//Ranged Interval of time
-
-	//Need a "router" to hand it to the right construction
+	//A router 
 
 	var pointMatch = DateExps.MatchesExpOrExpRange(s, DateExps.ISO_8601_POINT),
 		durMatch = DateExps.MatchesExpOrExpRange(s, DateExps.ISO_8601_DURATION);
 
 	if(pointMatch && pointMatch.length>-1){
-		this.exp = new PointExp(s, options);
+		this.exp = new PointExp(s, options); //new PointExp().constructor.apply(this, [s, options]); 
+		this.point = true;
 	}
 	else if(durMatch && durMatch.length>-1){
-		this.exp = new DurExp(s, options);
-
+		this.exp = new DurExp(s, options); //new DurExp().constructor.apply(this, [s, options]);
+		this.duration=true;
 	}
+
+	//Extend DateExp
+	for (prop in this.exp){
+		if (!this[prop]) this[prop] = this.exp[prop];
+	}
+	//Transferrance
+	/*
+	if(this.exp && this.exp.hydrated){
+		if (this.)
+		this.
+	}*/
+
+	//Interval of time
+		//Ranged Interval of time
 	/*
 	else if(DateExps.MatchesExpOrExpRange(s, DateExps.ISO_8601_DURATION).length>-1){
 
