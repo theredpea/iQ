@@ -294,14 +294,6 @@ PointExp.prototype._hydrate = function(m, parts){
 
 		var specificityInt = 0,//-1, Because maxSpecificytInt is set to 1;
 			parts = this.parts || parts || DateExps.POINT_PARTS,
-			endMap = {
-				'year':0,	//Crazy
-				'month':12,
-				'day':0,	//Depends. Damn.
-				'hour':24,
-				'minute':59,
-				'second':59
-			}
 			hydratedObject = {
 							jsDate 			: new Date(m),
 							match 			: this.s.match(this.exp), //m.match(this.exp),
@@ -311,6 +303,13 @@ PointExp.prototype._hydrate = function(m, parts){
 							exp 			: m,
 							//https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Working_with_Objects?redirectlocale=en-US&redirectslug=JavaScript%2FGuide%2FWorking_with_Objects#Defining_getters_and_setters
 							get partsList()  { 	var that = this; 
+
+													return that.parts.map(function(part,i,a){ 
+														//So that if they are deFuzzied, and assigned default values, they show
+														return that[DateExps.DePartName(part)]; }); 
+							},
+							getPartsList	: function() { 	
+												var that = this; 
 
 													return that.parts.map(function(part,i,a){ 
 														//So that if they are deFuzzied, and assigned default values, they show
@@ -410,10 +409,26 @@ PointExp.prototype._hydrateFuzzyEnd = function(hydratedObject, parts){
 	//var hydratedObject = this._hydrate(m);
 	
 	var deFuzzied =0,
+		endMap = {
+			//year:0,	//Crazy
+			month:12,
+			//day:0,	//Depends. Damn.
+			hour:24,
+			minute:59,
+			second:59
+		},
+		miliMap = {
+			get second() { return 1000; },
+			get minute() { return this.second*60; },
+			get hour() { return this.minute*60; },
+			get day() { return this.hour*24; },
+			//get month() { return this.day*30; },
+
+		},
 		jsMap = {'day':'date'}, //Javascript's getDate returns what I call the dayPart
 		fuzzyEnd =function(hydratedObject, partName){
 			var m = hydratedObject.jsDate.valueOf();
-			hydratedObject.jsDateSecondBack = new Date(m-1000);	//One second back, else we'll stay in the same second!
+			hydratedObject.jsDateSecondBack = new Date(m-(endMap[partName]||miliMap[partName]));	//One second back, else we'll stay in the same second!
 
 			if (hydratedObject[partName] == -1){
 				var newPartName = partName;

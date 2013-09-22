@@ -107,7 +107,7 @@ shouldWork.concat(shouldNotWork).forEach(function(e,i,a){
 		onValue = (dateExp.onValue || dateExp.fuzzyOnValue);
 
 	if (onValue){
-		partsList = 		dateExp.endValue.partsList; //onValue.partsList; 	//Using onValue
+		partsList = 		dateExp.endValue.getPartsList(); //partsList; //onValue.partsList; 	//Using onValue
 		specificity = 		onValue.specificity,
 		specificityInt = 	onValue.specificityInt
 	}
