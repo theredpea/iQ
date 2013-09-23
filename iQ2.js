@@ -362,6 +362,10 @@ iQ._qsa = function(queryStringOrNode, queryString)
 };
 iQ.all = iQ._qsa;
 
+iQ._ce = function(elementName){
+    return document.createElement(elementName);
+}
+iQ.el = iQ._ce;
 
 iQ._qs = function(queryStringOrNode, queryString)
 {
@@ -422,8 +426,11 @@ iQ._eachNodes = function(nodeList, eachFunction, results)
             results.map.push(eachFunction(nodeList[i], i, nodeList));
         }
         */
+        if (nodeList)//!=undefined)
+    {
+        [].forEach.call(nodeList, eachFunction);
+    }
 
-    [].forEach.call(nodeList, eachFunction);
 }
 
 iQ._mapNodes = function(nodeList, eachFunction)
@@ -458,4 +465,4 @@ iQ._average = function()
 
 iQ._processHeader();
 iQ._index();
-iQ._workerSetup();
+//iQ._workerSetup();
