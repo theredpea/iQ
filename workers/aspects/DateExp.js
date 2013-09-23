@@ -21,7 +21,7 @@ DateExp.ISO_8601 = /^(?<year>-?(?:[1-9][0-9]*)?[0-9]{4})-(?<month>1[0-2]|0[1-9])
 
 DateExp.POINT 		= 
 DateExp.SPAN 		= /->/;
-DateExp.RANGE 		= /((?:-=)|(?:=-)|(?:-)|(?:=))/;
+DateExp.RANGE 		= /(-=|=-|(?:-)|(?:=))/;
 DateExp.DURATION 	= /(->)/;
 
 	//Check ContextRef
