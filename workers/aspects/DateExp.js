@@ -317,6 +317,7 @@ PointExp.prototype._hydrate = function(m, parts){
 							}
 						};
 
+
 		for(index in parts){	//Must go in-order, because specificity rules apply
 
 			var part = parts[index],			// ex { name: 'datePart', matchIndex: 0}	
@@ -355,10 +356,68 @@ PointExp.prototype._hydrate = function(m, parts){
 
 		}
 		
+		//Make sure the date is valid
+		//http://stackoverflow.com/a/1353711/1175496
+		if (isNaN(hydratedObject.jsDate.getTime())){
+			date =  new IsoDate(hydratedObject).Date;
+		}
+
+		//TODO: How to manage more elegantly? What do I mean 'elegant'?
+			//Part of a constructor?
+			//I already to the .match() here
+			//Well, one overload for constructor is to accept pre-.matched()
+			//Which should basically map a JS object as if it were Python kwargs, and guide it into JS native's Date constructor
 
 		return hydratedObject;
 
 };
+
+//https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function/apply#Using_apply_to_chain_constructors
+Function.prototype.construct = function (aArgs) {
+    var fConstructor = this, 
+    	fNewConstr = function () { 
+    		//The main question I had in wondering what to pass as the "this" arg... 
+    		//TODO: What does the 'this' arg represent, since we're inside an anonymouse function?
+    		//I believe the most important part is that it makes new fNewConstr() meaningful; filling out all its this. properties
+    		fConstructor.apply(this, aArgs); 
+    	};
+	//So that "inheritance" works; instanceof will work, 
+		//and also constructor will point to the fConstructor;
+	//Could I use this to mask Date in an IsoDate directly?
+		//without separating it as a property: IsoDate.Date 
+    fNewConstr.prototype = fConstructor.prototype;
+    return new fNewConstr();
+};
+
+IsoDate = function(o){
+
+
+	var hasParts = false,
+		constructArgs = []
+	for (part in DateExps.POINT_PARTS){
+		var part = DateExps.POINT_PARTS[part].name,
+			dePart = DateExps.DePartName(part); //partO = (part+'Part');
+
+		if (dePart in o || part in o){
+			//So this de-parts it?
+			o[dePart] = o[dePart] || o[part];
+			hasParts = true;
+			constructArgs.push(o[part] || 0); //(false || 0) == 0;
+		} else{
+			constructArgs.push(0);
+
+		}
+	}
+
+	//In the order of Date constructor requirements.
+	if (hasParts){
+		this.Date= Date.construct(constructArgs);
+	}
+	
+
+
+};
+
 
 DateExps.DePartName = function (e) {
 	name = e.name ? e.name : (e ? e : '');
@@ -428,7 +487,7 @@ PointExp.prototype._hydrateFuzzyEnd = function(hydratedObject, parts){
 		jsMap = {'day':'date'}, //Javascript's getDate returns what I call the dayPart
 		fuzzyEnd =function(hydratedObject, partName){
 			var m = hydratedObject.jsDate.valueOf();
-			hydratedObject.jsDateSecondBack = new Date(m-(endMap[partName]||miliMap[partName]));	//One second back, else we'll stay in the same second!
+			hydratedObject.jsDateSecondBack = new Date(m-(endMap[partName]||miliMap[partName]));
 
 			if (hydratedObject[partName] == -1){
 				var newPartName = partName;
