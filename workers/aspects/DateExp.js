@@ -348,8 +348,9 @@ PointExp.prototype._hydrate = function(m, parts){
 					throw {name: valueName, value: hydratedObject[valueName], message:'ParseException'};//!(parseFloat)'};
 			}
 			catch(e){
+				//Since I'm dealing with a copy...
 				hydratedObject[valueName]=-1;
-				//console.log(e.message); 
+				console.log(e.message); 
 				//'Could not parseFloat (or else it produced NaN, undefined, null...) for name:\n\t' + 
 				//				part.name + '\nvalue:\n\t' + tryParse);
 			}
@@ -359,7 +360,7 @@ PointExp.prototype._hydrate = function(m, parts){
 		//Make sure the date is valid
 		//http://stackoverflow.com/a/1353711/1175496
 		if (isNaN(hydratedObject.jsDate.getTime())){
-			date =  new IsoDate(hydratedObject).Date;
+			hydratedObject.jsDate =  new IsoDate(hydratedObject).Date;
 		}
 
 		//TODO: How to manage more elegantly? What do I mean 'elegant'?
@@ -373,6 +374,7 @@ PointExp.prototype._hydrate = function(m, parts){
 };
 
 //https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function/apply#Using_apply_to_chain_constructors
+/* Doesn't work with native constructors, like Date
 Function.prototype.construct = function (aArgs) {
     var fConstructor = this, 
     	fNewConstr = function () { 
@@ -388,6 +390,15 @@ Function.prototype.construct = function (aArgs) {
     fNewConstr.prototype = fConstructor.prototype;
     return new fNewConstr();
 };
+*/
+
+//Black arts of Javascript; this is an edge case
+//https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function/bind#Bound_functions_used_as_constructors
+//I just do this so I can effectively *args like Python allows me to; so:
+	//1) I can pass variable number of arguments, if (say) user was no more specific than "Months"
+	//2) I don't need to explicitly get all six index positions
+
+DateCall = Date.bind(new Date());
 
 IsoDate = function(o){
 
@@ -402,16 +413,17 @@ IsoDate = function(o){
 			//So this de-parts it?
 			o[dePart] = o[dePart] || o[part];
 			hasParts = true;
-			constructArgs.push(o[part] || 0); //(false || 0) == 0;
+			if (!o[part]) { continue; }
+			constructArgs.push(o[part]);// || 0); 
 		} else{
-			constructArgs.push(0);
-
+			//constructArgs.push(0);
+			continue;
 		}
 	}
 
 	//In the order of Date constructor requirements.
 	if (hasParts){
-		this.Date= Date.construct(constructArgs);
+		this.Date= new DateCall(constructArgs); //Date.construct(constructArgs);
 	}
 	
 
@@ -487,6 +499,7 @@ PointExp.prototype._hydrateFuzzyEnd = function(hydratedObject, parts){
 		jsMap = {'day':'date'}, //Javascript's getDate returns what I call the dayPart
 		fuzzyEnd =function(hydratedObject, partName){
 			var m = hydratedObject.jsDate.valueOf();
+			//TODO:This is wrong
 			hydratedObject.jsDateSecondBack = new Date(m-(endMap[partName]||miliMap[partName]));
 
 			if (hydratedObject[partName] == -1){
@@ -513,7 +526,7 @@ PointExp.prototype._hydrateFuzzyEnd = function(hydratedObject, parts){
 				}
 			}
 	};
-	console.log('fuzzyEnd');
+	
 	return this._hydrateFuzzy(hydratedObject, fuzzyEnd);
 };
 
