@@ -2,11 +2,9 @@
 importScripts('base.js');
 importScripts('aspects/DateExp.js');
 
-self.prototype
- = self.Base;
-
+self.prototype = self.Base;
+//If this setup becomes long; move to Base init()
 addEventListener('message', function(event){ self.prototype.onMessage.call(self,event) }, false);
-
 
 //cascadeWorkers
 

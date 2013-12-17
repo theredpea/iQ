@@ -9,23 +9,22 @@ iQ = {};
      'references',
      'resources',
      'hidden',
-     'footnote'
- ];
+     'footnote'];
 
 
  iQ.elements = [
- 'nonFraction',
- 'nonNumeric',
- 'denominator',
- 'exclude',
- 'footnote',
- 'fraction',
- 'header',
- 'hidden',
- 'numerator',
- 'references',
- 'resources', 
- 'tuple'];
+     'nonFraction',
+     'nonNumeric',
+     'denominator',
+     'exclude',
+     'footnote',
+     'fraction',
+     'header',
+     'hidden',
+     'numerator',
+     'references',
+     'resources', 
+     'tuple'];
 
 
 iQ._workerResponse = function(event, workerName)
@@ -37,7 +36,7 @@ iQ._workerResponse = function(event, workerName)
     console.log(event.data);
     if (event.data.results instanceof Array)
     {
-        iQ._eachNodes(iQ
+        iQ.forEachNode(iQ
                         .flatten(event.data.results)
                         .map(function(id){
                                     return document.getElementById(id);
@@ -68,31 +67,34 @@ iQ._workerName = function(type){
 	return type + 'Worker';
 };
 
-iQ._workerSetup = function()
-{
-    var workerTypeList = ['name', 'unit', 'date'];// 'date', 'unit';
-        workerTypeList.forEach(function(type){
-            var workerName = iQ._workerName(type),
-                workerFile = iQ._workerFileName(type),
-                workerResponseName = '_on' + workerName + 'WorkerResponse';
-            //If the worker already exists
-            iQ[workerName]= this[workerName] || new Worker(workerFile);
-            iQ[workerResponseName] = function(e){
-                iQ._workerResponse(e, workerName);
-            };
-            iQ[workerName].addEventListener(
-                    'message',
-                    iQ[workerResponseName],
-                    false
-                );
+iQ._workerCallbackName = function(type){
+    return '_on' + type + 'WorkerCallback';
+};
 
-            var args = [iQ.index],
-            	aspectIndex;
-            //console.log(iQ.aspectIndices);
+iQ._workerTypes = [
+    'name', 
+    'unit', 
+    'date'];
+
+iQ._workerSetup = function(){
+
+        iQ._workerTypes.forEach(function(type){
+            //Strings
+            var workerName          = iQ._workerName(type),
+                workerFile          = iQ._workerFileName(type),
+                workerCallbackName  = iQ._workerCallbackName(type),
+            //Worker
+                worker              = iQ[workerName] = iQ[workerName] || new Worker(workerFile),
+            //Function (Callback)
+                workerCallback      = iQ[workerResponseName] = function(e){ iQ._workerResponse(e, workerName); };
+
+            worker.addEventListener('message', workerCallback,false);
+
+            var args = {},
+                aspectIndex;
+            //If aspectIndices are delegated to workers...
             if (iQ.aspectIndices && (aspectIndex = iQ.aspectIndices[type])){
-            	//console.log(iQ.aspectIndices);
             	args.aspectIndex = aspectIndex; 
-            	args.push(aspectIndex);
             }
             console.log(args);
 
@@ -112,7 +114,7 @@ iQ._workerSetup = function()
 iQ.prefixIt = function(it, prefix, escOrJoiner) {
     var joiner = ':';
     if (typeof(escOrJoiner)==='string') joiner= escOrJoiner;
-    else if (escOrJoiner || escOrJoiner===undefined) joiner = '\\:';
+    else if (escOrJoiner || escOrJoiner===undefined) joiner = '\\:'; //Escape joiner for use in iQ.allNodes
 
     return prefix+joiner+it;
 };
@@ -123,7 +125,7 @@ iQ.prefixPlusIt = function(it, prefix, escOrJoiner){
 
 
 
-///A map-ready function-creator
+///Functions that create and return inner-functions; inner-functions can be used in .map
 ///Given first-level attributes prefix and escape
 ///Returns function that appends element
 iQ.prefixThem = function(prefix, escapedOrJoiner){
@@ -146,42 +148,33 @@ iQ.flatten = function(twoDimArray){
 
 iQ._index = function () {
 
-        iQ.allElements = iQ.flatten(
-                                    iQ.elements.map(            //TODO: Shim for native array map method
-                                        iQ.prefixPlusThem('ix')
-                                        )
-                                    );
+        iQ.allNodesElements = iQ.flatten(    //Necessary because we use prefixPlus
+                            iQ.elements.map(                //TODO: Shim for native array map method
+                                iQ.prefixPlusThem('ix')
+                            )
+                        );
                                     
-        var allElements     = iQ.all(iQ.allElements),
-
+        var allElements     = iQ.allNodes(iQ.allNodesElements),
             index           = {},
             indexF          =   function(ixNode, i){
                                     var iQid        = iQ.prefixIt(i, 'iQ', '_'),
-                                        attrs       = [
-                                            'contextRef',
-                                            'decimals',
-                                            'format',
-                                            'id',
-                                            'name',
-                                            'order',
-                                            'precision',
-                                            'target',
-                                            'tupleRef',
-                                            'scale',
-                                            'sign',
-                                            'unitRef'
-                                        ],
                                         ixType      = ixNode.nodeName,
-                                        //TODO: Accommodate all attributes, not just nonFraction's? http://www.xbrl.org/Specification/inlineXBRL-part1/PWD-2013-02-13/inlineXBRL-part1-PWD-2013-02-13.html#sec-nonFractions
-                                        //TODO: Accommodate more complex content? 
+                                        //TODO: Accommodate all attributes, not just nonFraction's? 
+                                            //http://www.xbrl.org/Specification/inlineXBRL-part1/PWD-2013-02-13/inlineXBRL-part1-PWD-2013-02-13.html#sec-nonFractions
+                                        //TODO: Accommodate more complex content; cast them as their Javascript equivalent
+                                            //HTML text
+                                            //Numbers
+                                            //Booleans
+
                                         valueResult = {
                                             ixType          :ixType,            
                                             value           :iQ._text(ixNode),
                                             index           :i
                                         };
 
-                                    attrs.forEach(function(attr){
-                                        valueResult[attr] = iQ._attr(ixNode, attr);
+                                    iQ.attrs.forEach(function(attr){
+                                        var v;
+                                        if(v=iQ._attr(ixNode, attr)) valueResult[attr]=v;
                                     });
                                     //TODO: Special processing depending on ixType?
 
@@ -191,7 +184,7 @@ iQ._index = function () {
                                     ixNode.id = iQid;
                                     index[iQid] = valueResult;
                                 };
-            iQ._eachNodes(allElements, indexF);
+            iQ.forEachNode(allElements, indexF);
         
 
             iQ.index = index;
@@ -207,8 +200,7 @@ Link:
 Note:
 	These are "Inline XBRL Attributes". They are not namespaced in the spec.
 */
-iQ.att =[
-
+iQ.attrs =[
 	'arcrole',
 	'contextRef',
 	'decimals',
@@ -228,26 +220,15 @@ iQ.att =[
 	'title',
 	'tupleID',
 	'tupleRef',
-	'unitRef'
-];
+	'unitRef'];
 
-
-
-
-
-
-///Just aliases
-///Overkill?
-///Probably
-//iQ.q  = document.querySelector;
-//iQ.qa = document.querySelectorAll;
 
 iQ._processHeader = function()
 {
   	
-    var header      = iQ.first(iQ.prefixPlusIt('header', 'ix')),
-        contexts    = iQ.all(header, iQ.prefixPlusIt('context', 'xbrli')),
-        units       = iQ.all(header, iQ.prefixPlusIt('unit', 'xbrli'));
+    var header      = iQ.firstNode(iQ.prefixPlusIt('header', 'ix')),
+        contexts    = iQ.allNodes(header, iQ.prefixPlusIt('context', 'xbrli')),
+        units       = iQ.allNodes(header, iQ.prefixPlusIt('unit', 'xbrli'));
 
         iQ.unitRef ={};
         iQ.contextRef = {};
@@ -255,14 +236,18 @@ iQ._processHeader = function()
             //unitWorker might delegate to numeratorWorker, denominatorWorker...
         //context is used by contextWorker
             //delegate to startWorker, endWorker, timeSpanWorker, memberWorker, axisWorker
-        //TODO: Kick off unitWorker and contextWorker; they can do the de-referencing
-  		iQ._eachNodes(contexts, iQ._processContextNodes); // iQ._contexts = iQ._mapNodes
+  		iQ.forEachNode(contexts, iQ._processContextNode);
 
-    	iQ._eachNodes(units, iQ._processUnitNodes);   
+    	iQ.forEachNode(units, iQ._processUnitNode);   
 
-    	//TODO: Inefficient, collapse into above?
-    	//Oh, no, not if one-to-many
-    	iQ.aspectIndices = {'unit' : iQ.unitRef, 'date': iQ.contextRef, 'member': iQ.contextRef };
+    	//Currently making a worker for the smallest queryable property; i.e. date, name, member; each of which has a worker. 
+            //This means a single broad aspectIndex; contextRef is sent to multiple workers
+        //Consider creating workers for the broader iQ concept; context; which delegates to date, or member: a tree of concepts forms a hierarchy of workers; 
+            //This means a single broad aspectIndex; contextRef is sent to the parent worker who can decompose it into smaller aspectIndices for subWorkers
+    	iQ.aspectIndices = {
+            unit    : iQ.unitRef, 
+            date    : iQ.contextRef, 
+            member  : iQ.contextRef };
 
 };
 
@@ -272,7 +257,7 @@ iQ._xbrli = function(it){
     return iQ.prefixIt(it, 'xbrli');
 };
 
-iQ._processContextNodes = function (contextNode, index, nodeList)
+iQ._processContextNode = function (contextNode, index, nodeList)
 {
 
         //1) date texts are ISO 8601 
@@ -281,31 +266,28 @@ iQ._processContextNodes = function (contextNode, index, nodeList)
 
 
         //In original iQ.js, I converted date texts to Date objects
-        //TODO: Should I do it? Use the right rules. See iQ.dateFromIso
+        //TODO: Should I do it? Use the right rules. See iQ.dateFromIso; see aspects/DateExp
         //Need to accommodate not just dates, but times; and time zones!
 
-        //TODO:Should this be delegated to the top-level workers for which it's relevant.
-
-
          
-        var identifierNode  = iQ.first(contextNode, iQ.prefixIt('identifier', 'xbrli')),
-            periodNode      = iQ.first(contextNode, iQ.prefixIt('period', 'xbrli')),
-            segmentNodes    = iQ.all(contextNode, iQ.prefixIt('segment', 'xbrli')),
-            periodTextF     = function(text) { return iQ._text(iQ.first(periodNode, iQ.prefixIt(text, 'xbrli'))) },
+        var identifierNode  = iQ.firstNode(contextNode, iQ.prefixIt('identifier', 'xbrli')),
+            periodNode      = iQ.firstNode(contextNode, iQ.prefixIt('period', 'xbrli')),
+            segmentNodes    = iQ.allNodes(contextNode, iQ.prefixIt('segment', 'xbrli')),
+            periodTextF     = function(text) { return iQ._text(iQ.firstNode(periodNode, iQ.prefixIt(text, 'xbrli'))) },
             segmentMaker    = function(s) { return function(memberNode) { s[iQ._attr(memberNode, 'dimension')] = iQ._text(memberNode) }},
             startDate       = periodTextF('startDate'),
             endDate         = periodTextF('endDate'),
             instant         = periodTextF('instant'),
-            forever         = new Boolean(iQ.first(periodNode, iQ.prefixIt('forever', 'xbrli'))),
+            forever         = new Boolean(iQ.firstNode(periodNode, iQ.prefixIt('forever', 'xbrli'))),
             entityObject    = {
                 identifier  :iQ._text(identifierNode),
                 scheme      :iQ._attr(identifierNode)
             },
             segmentObject   = {},
-            throwAway       = iQ._eachNodes(segmentNodes, segmentMaker(segmentObject)),
+            throwAway       = iQ.forEachNode(segmentNodes, segmentMaker(segmentObject)),
             periodObject    = {
                 startDate       :startDate,
-                startDateDate   :new Date(startDate),   //See above re: method; I don't think IE Date constructors recognize ISO strings
+                startDateDate   :new Date(startDate),   //See above re: dateFromIso; I don't think IE Date constructors recognize ISO strings
                 endDate         :endDate,
                 endDateDate     :new Date(endDate),
                 instant         :instant,
@@ -313,7 +295,7 @@ iQ._processContextNodes = function (contextNode, index, nodeList)
             },
 
             contextResult   = {
-                id              :contextNode.id,
+                id              :contextNode.id,        //This ID becomes another kind of index for the worker; the ivnertedIndex only need have these as values
                 entity          :entityObject,
             //Keyed on ['startDate', 'endDate', 'instant']
                 //transferrence; should I un-nest this?
@@ -327,21 +309,21 @@ iQ._processContextNodes = function (contextNode, index, nodeList)
 };
 
 
-iQ._processUnitNodes = function(unitNode, index, nodeList)
+iQ._processUnitNode = function(unitNode, index, nodeList)
 {
 
     //TODO: Support multiplication? Two measures?
     var measureQ        = iQ.prefixIt('measure', 'xbrli'),
-        measureNodes    = iQ.all(unitNode, measureQ),
-        measureNode     = measureNodes[0], //iQ.first(unitNode, measureQ),
-        numeratorNode   = iQ.first(unitNode, iQ.prefixIt('numerator', 'xbrli')),
-        denominatorNode = iQ.first(unitNode, iQ.prefixIt('denominator', 'xbrli')),
+        measureNodes    = iQ.allNodes(unitNode, measureQ),
+        measureNode     = measureNodes[0], //iQ.firstNode(unitNode, measureQ),
+        numeratorNode   = iQ.firstNode(unitNode, iQ.prefixIt('numerator', 'xbrli')),
+        denominatorNode = iQ.firstNode(unitNode, iQ.prefixIt('denominator', 'xbrli')),
         unitResult = {
             id              :unitNode.id,   //.getAttribute('id'), //attributes['id'],
             measure         :iQ._text(measureNode),
-            numerator       :iQ._text(iQ.first(numeratorNode, measureQ)),
-            denominator     :iQ._text(iQ.first(denominatorNode, measureQ)),
-            multiplicands   :iQ._mapNodes(measureNodes, iQ._text),  
+            numerator       :iQ._text(iQ.firstNode(numeratorNode, measureQ)),
+            denominator     :iQ._text(iQ.firstNode(denominatorNode, measureQ)),
+            multiplicands   :iQ.mapNode(measureNodes, iQ._text),  
             index           :index,        
             //http://math.stackexchange.com/a/229564
             // http://www.xbrl.org/Specification/XBRL-RECOMMENDATION-2003-12-31+Corrected-Errata-2008-07-02.htm#_example_21
@@ -360,7 +342,7 @@ iQ._qsa = function(queryStringOrNode, queryString)
 {
     return iQ._q(queryStringOrNode, queryString, 'querySelectorAll');
 };
-iQ.all = iQ._qsa;
+iQ.allNodes = iQ._qsa;
 
 iQ._ce = function(elementName){
     return document.createElement(elementName);
@@ -372,75 +354,55 @@ iQ._qs = function(queryStringOrNode, queryString)
     return iQ._q(queryStringOrNode, queryString, 'querySelector');
 };
 
-iQ.first = iQ._qs;
+iQ.firstNode = iQ._qs;
 
 //Would prefer to use this for 
-iQ.named = function(tagNameOrNode, tagName)
+iQ.nodesNamed = function(tagNameOrNode, tagName)
 {
     return iQ._q(tagNameOrNode, tagName, 'getElementsByTagName');
 };
 
 iQ._q = function(queryStringOrNode, queryString, queryMethod)
 {
-    var result;
-    //if null or undefined
-    if (!queryStringOrNode){
-        return null;
-    }
-    //query whole document; 
-    else if (typeof(queryStringOrNode)==='string' || queryStringOrNode instanceof Array){
-        return document[queryMethod](queryStringOrNode);
-    }
-    //first arg is a node; query its children
-    else{
-        return queryStringOrNode[queryMethod](queryString);
+
+    if (queryStringOrNode){
+
+        //query whole document; 
+        //Odd: String('this') instanceof String == false
+        if (typeof(queryStringOrNode)==='string' || queryStringOrNode instanceof Array){
+            return document[queryMethod](queryStringOrNode);
+        }
+        //first arg is a node; query its children
+        else{
+            return queryStringOrNode[queryMethod](queryString);
+        }
     }
 
 };
 
 iQ._text = function(node)
 {
-    return node ? node.textContent : undefined;
+    if (node) return node.textContent;
 }
 
 iQ._attr = function(node, attr)
 {
-    return !node ? 
-                undefined
-                : attr instanceof Array ?
-                    attr.map(function(att){node.getAttribute(att); })
-                    : node.getAttribute(attr);
+    if (node && attr) return attr instanceof Array ?
+                        attr.map(function(att){node.getAttribute(att); })
+                        : node.getAttribute(attr);
 }
 
 ///NodeList utilities
 ///=========================================
-iQ._eachNodes = function(nodeList, eachFunction, results)
+iQ.forEachNode = function(nodeList, eachFunction)
 {
-        /*
-        var length = nodeList.length;
-        results = results || {};
-        results.map = results.map || [];
-
-        for (var i=0, i<length, i++)
-        {
-            results.map.push(eachFunction(nodeList[i], i, nodeList));
-        }
-        */
-        if (nodeList)//!=undefined)
-    {
-        [].forEach.call(nodeList, eachFunction);
-    }
+    if (nodeList) return [].forEach.call(nodeList, eachFunction);
 
 }
 
-iQ._mapNodes = function(nodeList, eachFunction)
+iQ.mapNode = function(nodeList, eachFunction)
 {
-    /*
-    results = {};
-    iQ._eachNodes(nodeList, eachFunction, results);
-    return results.map;
-    */
-    [].map.call(nodeList, eachFunction);
+    if (nodeList) return [].map.call(nodeList, eachFunction);
 }
 
 

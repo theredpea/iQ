@@ -1,41 +1,45 @@
 importScripts('utility/set.js');
 
 Base = { 
-        onMessage: function(event){
-                        this.init(event.data.args);
-                        //throw JSON.stringify(this.invertedIndex == undefined)_;
-                        var method = event.data.method;
+    onMessage: function(event){
+                    this.init(event.data.args);
+                    //throw JSON.stringify(this.invertedIndex == undefined)_;
+                    var method = event.data.method;
 
 
-                        if (method in this || method in this.prototype)
-                        {
-                            (this[method] || this.prototype[method]).call(this,event.data.args);
-                            //this[method](event.data.args);
-                        }
-                        else{
-                            throw 'Inheritance not working';
-                        }
-                    },
+                    if (method in this || method in this.prototype)
+                    {
+                        (this[method] || this.prototype[method]).call(this,event.data.args);
+                        //this[method](event.data.args);
+                    }
+                    else{
+                        throw 'Inheritance not working';
+                    }
+                },
 
     init: function(args){
 
 
         if(!this.initted){
+            //Map; 
+                //keys are the value of the iXBRL object's relevant property; for a dateWorker it's a iQ's context:DateContext; for a nameWorker it's a value's name:String
+                //values is an array representing the iQ ids (mapped to nodes in the DOM; and objects in the iQ instance) which have this elemental 
+            this.invertedIndex  = {};
+            //For memoizing results with queries
+                //keys are queries (stringified)
+                //values are the results
+            this.cache          = {};
+            //Reset
+            this.results        = [];
+            //Only specific workers i.e. date, (context), will need aspectIndex
+                //keys are the iXBRL author's identifier for the resource; i.e. contextRef/context.id for a context object
+                //values are the resource itself; i.e. all the details of context
+            this.aspectIndex = args && args.aspectIndex;
+            //To avoid double-dipping
+            this.initted = true;
 
-            this.invertedIndex = this.invertedIndex || {};
-            this.cache = this.cache || {};
         }
 
-
-        this.initted = true;
-        this.results = [];
-
-        //At one point, was assigning this return value to a variable called "continue"
-        //And deciding whether init methods which extend this init method should execute
-
-        //throw(new String(args));
-        this.aspectIndex = (args && (args.aspectIndex || args[1]));
-        //throw(this.aspectIndex);
         return !this.initted;
     },
 
