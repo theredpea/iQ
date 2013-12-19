@@ -27,7 +27,7 @@ iQ = {};
      'tuple'];
 
 
-iQ._workerResponse = function(event, workerName)
+iQ._workerCallback = function(event, workerName)
 {
     //event.data contains an array of values
     //alert('Got results from worker: ' + workerName);
@@ -49,15 +49,7 @@ iQ._workerResponse = function(event, workerName)
 
 };
 
-iQ.name = function(name){
 
-	//Need to give it some GUID; maybe just increment it?
-	//Accommodate and's, or's...
-    if(iQ['nameWorker']){
-        iQ['nameWorker'].postMessage({query: true, queryValue: name});
-    };
-
-};
 
 iQ._workerFileName = function(type){
 	return 'workers/' + type + '.js';
@@ -71,10 +63,30 @@ iQ._workerCallbackName = function(type){
     return '_on' + type + 'WorkerCallback';
 };
 
+//Workers
+//Currently there are workers for individual aspects
+//But could 
+//See #workerHierarchy
 iQ._workerTypes = [
     'name', 
     'unit', 
     'date'];
+//Each is made into an iQ function which directly maps to a worker
+iQ._queryTypes = [
+    'name',
+    'unit',
+    'date'
+];
+
+iQ.name = function(name){
+
+    //Need to give it some GUID; maybe just increment it?
+    //Accommodate and's, or's...
+    if(iQ['nameWorker']){
+        iQ['nameWorker'].postMessage({query: true, queryValue: name});
+    };
+
+};
 
 iQ._workerSetup = function(){
 
@@ -86,17 +98,18 @@ iQ._workerSetup = function(){
             //Worker
                 worker              = iQ[workerName] = iQ[workerName] || new Worker(workerFile),
             //Function (Callback)
-                workerCallback      = iQ[workerResponseName] = function(e){ iQ._workerResponse(e, workerName); };
+                workerCallback      = iQ[workerCallbackName] = function(e){ iQ._workerCallback(e, workerName); };
 
             worker.addEventListener('message', workerCallback,false);
 
-            var args = {},
+            var args = {
+                    originalIndex: iQ.index
+                },
                 aspectIndex;
             //If aspectIndices are delegated to workers...
             if (iQ.aspectIndices && (aspectIndex = iQ.aspectIndices[type])){
             	args.aspectIndex = aspectIndex; 
             }
-            console.log(args);
 
             iQ[workerName].postMessage({
             	method: 'makeInvertedIndex', 
@@ -104,6 +117,10 @@ iQ._workerSetup = function(){
             	});
 
         });
+
+        iQ._queryTypes.forEach(function(){
+            
+        })
 
 
 
@@ -186,6 +203,28 @@ iQ._index = function () {
                                 };
             iQ.forEachNode(allElements, indexF);
         
+            //Example index:
+            /*
+            iQ_0: {
+                    contextRef: "fy10d"
+                    index: 0
+                    ixType: "IX:NONNUMERIC"
+                    name: "dei:DocumentType"
+                    value: "10-K"
+                },
+            iQ_1: {
+                    contextRef: "fy10d"
+                    format: "ixt:datelongus"
+                    index: 1
+                    ixType: "IX:NONNUMERIC"
+                    name: "dei:DocumentPeriodEndDate"
+                    value: "December 31, 2010 "
+            }
+            */
+            //1) It is valid JSON
+            //2) It can be stringified without loss of fidelity (i.e. no DOM nodes)
+            //3) The keys can be used to quickly lookupv alues
+            //4) The keys can be used with an ID selector to find location in DOM
 
             iQ.index = index;
         //this.index.elements;
@@ -240,6 +279,7 @@ iQ._processHeader = function()
 
     	iQ.forEachNode(units, iQ._processUnitNode);   
 
+        //#workerHierarchy
     	//Currently making a worker for the smallest queryable property; i.e. date, name, member; each of which has a worker. 
             //This means a single broad aspectIndex; contextRef is sent to multiple workers
         //Consider creating workers for the broader iQ concept; context; which delegates to date, or member: a tree of concepts forms a hierarchy of workers; 
@@ -248,6 +288,34 @@ iQ._processHeader = function()
             unit    : iQ.unitRef, 
             date    : iQ.contextRef, 
             member  : iQ.contextRef };
+        //Example aspect index
+        /*fy07e: 
+        {
+            entity: {
+                identifier: "9876543210"
+                scheme: undefined
+            }
+            id: "fy07e"
+            index: 10
+            period: {
+                endDate: undefined
+                endDateDate: Invalid Date
+                instant: "2007-12-31"
+                instantDate: Sun Dec 30 2007 17:00:00 GMT-0700 (Mountain Standard Time)
+                startDate: undefined
+                startDateDate: Invalid Date
+            }
+            segment: {}
+        }
+        */
+        //1)Lookup for XBRL refs; a single ref represents many domains/many aspects
+        //2)Create common shortcut queries; fy07e is equivalent to "every value as of 2007-12-31"
+            //.id('9876543210').asOf('2007-12-31');
+            //No need to set.intersection the results of two separate workers (idWorker and dateWorker)
+            //If we can build logic that can infer 'fy07e' from the query .id('9876543210').asOf('2007-12-31');
+        //3)Valid JSON (even the Date objects); can (must) be passed to workers to create individual
+        
+
 
 };
 
@@ -295,7 +363,7 @@ iQ._processContextNode = function (contextNode, index, nodeList)
             },
 
             contextResult   = {
-                id              :contextNode.id,        //This ID becomes another kind of index for the worker; the ivnertedIndex only need have these as values
+                id              :contextNode.id,
                 entity          :entityObject,
             //Keyed on ['startDate', 'endDate', 'instant']
                 //transferrence; should I un-nest this?

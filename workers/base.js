@@ -12,9 +12,6 @@ Base = {
                         (this[method] || this.prototype[method]).call(this,event.data.args);
                         //this[method](event.data.args);
                     }
-                    else{
-                        throw 'Inheritance not working';
-                    }
                 },
 
     init: function(args){
@@ -24,6 +21,7 @@ Base = {
             //Map; 
                 //keys are the value of the iXBRL object's relevant property; for a dateWorker it's a iQ's context:DateContext; for a nameWorker it's a value's name:String
                 //values is an array representing the iQ ids (mapped to nodes in the DOM; and objects in the iQ instance) which have this elemental 
+                    //OR it could be an array representing the aspectIndex ids
             this.invertedIndex  = {};
             //For memoizing results with queries
                 //keys are queries (stringified)
@@ -175,8 +173,8 @@ reGet = function(arg, obj) {
     }
 
 
-//Takes k's, which are the keys representing the main aspect of this worker
-//Produces objects that may be filtered and subsequently re-mapped;
+//Input: Keys/refs representing the main aspect of this worker
+//Output: Objects that that may be filtered and subsequently re-mapped into even smaller indexes
 	aspectMapper = function(k){ 
 				//Only define aspectIndex if you need to map something like
 						//string object, ISO date
