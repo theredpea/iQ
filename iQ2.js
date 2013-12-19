@@ -67,12 +67,12 @@ iQ._workerCallbackName = function(type){
 //Currently there are workers for individual aspects
 //But could 
 //See #workerHierarchy
-iQ._workerTypes = [
+iQ._workers = [
     'name', 
     'unit', 
     'date'];
 //Each is made into an iQ function which directly maps to a worker
-iQ._queryTypes = [
+iQ._queryableWorkers = [
     'name',
     'unit',
     'date'
@@ -90,7 +90,7 @@ iQ.name = function(name){
 
 iQ._workerSetup = function(){
 
-        iQ._workerTypes.forEach(function(type){
+        iQ._workers.forEach(function(type){
             //Strings
             var workerName          = iQ._workerName(type),
                 workerFile          = iQ._workerFileName(type),
@@ -118,9 +118,20 @@ iQ._workerSetup = function(){
 
         });
 
-        iQ._queryTypes.forEach(function(){
-            
-        })
+        iQ._queryableWorkers.forEach(function(type){
+                var workerName = iQ._workerName(type)
+                if (iQ[workerName]){
+                    iQ[type] = function(query){
+                        //Should the query be time-stamped to cache?
+                        //Indexed?
+                        //Accommodate and's, or's...
+                        iQ[workerName].postMessage({
+                            method: 'getPostings', 
+                            args:   { query: query }
+                        });
+                    }
+            }
+        });
 
 
 

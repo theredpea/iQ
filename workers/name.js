@@ -11,7 +11,7 @@ getInvertedKey = function(obj) {
 
 init = function(args){
 	//Defaults
-	if (!self.initted){
+	if (!self.initted){ //Backbone has a _once event that is useful here
 
 	var cont = self.prototype.init.call(self,args);
 	//Continue decides whether it's been initted

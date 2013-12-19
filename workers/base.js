@@ -101,12 +101,12 @@ Base = {
 
 //Takes the object and intelligently maps back into the originalIndex objects
 
-	retrieveVocab : function(args){
+	getVocab : function(args){
 			args.vocab = vocabMapper;
-			return this.retrievePostings(args)
+			return this.getPostings(args)
 	},
 
-	retrievePostings : function(args){
+	getPostings : function(args){
 			var query = args.query || args[0],
 				filterFunc = function(object){ return true; },
 				identityFunc = this.aspectMapper || aspectMapper, //function(object){ return object; },
