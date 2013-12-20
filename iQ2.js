@@ -27,7 +27,11 @@ iQ = {};
      'tuple'];
 
 
-iQ._workerCallback = function(event, workerName)
+iQ._resultSetCallback = function(event, workerName){
+///
+};
+
+iQ._domHighlightCallback = function(event, workerName)
 {
     //event.data contains an array of values
     //alert('Got results from worker: ' + workerName);
@@ -59,7 +63,7 @@ iQ._workerName = function(type){
 	return type + 'Worker';
 };
 
-iQ._workerCallbackName = function(type){
+iQ._domHighlightCallbackName = function(type){
     return '_on' + type + 'WorkerCallback';
 };
 
@@ -94,11 +98,11 @@ iQ._workerSetup = function(){
             //Strings
             var workerName          = iQ._workerName(type),
                 workerFile          = iQ._workerFileName(type),
-                workerCallbackName  = iQ._workerCallbackName(type),
+                workerCallbackName  = iQ._domHighlightCallbackName(type),
             //Worker
                 worker              = iQ[workerName] = iQ[workerName] || new Worker(workerFile),
             //Function (Callback)
-                workerCallback      = iQ[workerCallbackName] = function(e){ iQ._workerCallback(e, workerName); };
+                workerCallback      = iQ[workerCallbackName] = function(e){ iQ._domHighlightCallback(e, workerName); };
 
             worker.addEventListener('message', workerCallback,false);
 
@@ -122,13 +126,29 @@ iQ._workerSetup = function(){
                 var workerName = iQ._workerName(type)
                 if (iQ[workerName]){
                     iQ[type] = function(query){
+
+                        //Delete iQ.queryPromises after finished with a string of them;
+                        //Require some bookend like a .get() function
+                        iQ.queryPromises = iQ.queryPromises || [ new Promise().resolve() ];
+
                         //Should the query be time-stamped to cache?
                         //Indexed?
                         //Accommodate and's, or's...
-                        iQ[workerName].postMessage({
+                        iQ[workerName].postMessage({    //
                             method: 'getPostings', 
-                            args:   { query: query }
+                            args:   { query: query },
+                            //The worker script must return in its results the query that was provided
+                            //The worker object here in the main script will route it to the correct  Promise; and resolve the Promise with the results
                         });
+
+                        iQ[workerName].queryPromises = iQ[workerName].queryPromises  || {};//a cache
+                        iQ[workerName].queryPromises.query = new Promise();
+
+                        //For chainability; will intellisense work?
+                        return iQ;
+
+                        //TODO: The methods aren't synchronous; need a way to await results
+                        //
                     }
             }
         });
