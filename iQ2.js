@@ -27,9 +27,35 @@ iQ = {};
      'tuple'];
 
 
-iQ._resultSetCallback = function(event, workerName){
-///
+
+
+iQ._workerFileName = function(type){
+	return 'workers/' + type + '.js';
 };
+
+iQ._workerName = function(type){
+	return type + 'Worker';
+};
+
+iQ._workerCallbackName = function(type){
+    return '_on' + type + 'WorkerCallback';
+};
+
+//Workers
+//Currently there are workers for individual aspects
+//But could 
+//See #workerHierarchy
+iQ._workers = [
+    'name', 
+    'unit', 
+    'date'];
+//Each is made into an iQ function which directly maps to a worker
+iQ._queryableWorkers = [
+    'name',
+    'unit',
+    'date'
+];
+
 
 iQ._domHighlightCallback = function(event, workerName)
 {
@@ -54,55 +80,44 @@ iQ._domHighlightCallback = function(event, workerName)
 };
 
 
-
-iQ._workerFileName = function(type){
-	return 'workers/' + type + '.js';
+//TODO: This "createCallback" pattern, overkill?
+//Mostly nice when you want to know which worker it is... 
+//TODO: Check Is the worker set to 'this'? Then just attach its properties; name etc, to it
+iQ._createDomHighlightCallback = function(workerName){ 
+    return function(e){ iQ._domHighlightCallback(e, workerName); };
 };
 
-iQ._workerName = function(type){
-	return type + 'Worker';
-};
 
-iQ._domHighlightCallbackName = function(type){
-    return '_on' + type + 'WorkerCallback';
-};
+iQ._promiseHandlerCallback = function(e, workerName){
 
-//Workers
-//Currently there are workers for individual aspects
-//But could 
-//See #workerHierarchy
-iQ._workers = [
-    'name', 
-    'unit', 
-    'date'];
-//Each is made into an iQ function which directly maps to a worker
-iQ._queryableWorkers = [
-    'name',
-    'unit',
-    'date'
-];
-
-iQ.name = function(name){
-
-    //Need to give it some GUID; maybe just increment it?
-    //Accommodate and's, or's...
-    if(iQ['nameWorker']){
-        iQ['nameWorker'].postMessage({query: true, queryValue: name});
-    };
+    alert('hey');
 
 };
+
+
+iQ._createPromiseHandlerCallback = function(workerName){ 
+    return function(e){ iQ._promiseHandlerCallback(e, workerName); };
+};
+
 
 iQ._workerSetup = function(){
-
+        //All Workers
+        //========================
         iQ._workers.forEach(function(type){
             //Strings
             var workerName          = iQ._workerName(type),
                 workerFile          = iQ._workerFileName(type),
-                workerCallbackName  = iQ._domHighlightCallbackName(type),
+                workerCallbackName  = iQ._workerCallbackName(type),
             //Worker
                 worker              = iQ[workerName] = iQ[workerName] || new Worker(workerFile),
-            //Function (Callback)
-                workerCallback      = iQ[workerCallbackName] = function(e){ iQ._domHighlightCallback(e, workerName); };
+            //Function (Callback) //Only one of them at a time
+                workerCallback      = iQ[workerCallbackName] = iQ._createDomHighlightCallback(workerName);
+
+
+            //Only used by _queryableWorkers... ? Actually would be used by any worker that returns results; flesh out difference
+            worker.queryToPromise =         {};
+            worker.queryToPromiseResolves = {};
+            worker.queryToPromiseRejects =  {};
 
             worker.addEventListener('message', workerCallback,false);
 
@@ -122,33 +137,61 @@ iQ._workerSetup = function(){
 
         });
 
+        //Queryable Workers
+        //========================
         iQ._queryableWorkers.forEach(function(type){
-                var workerName = iQ._workerName(type)
-                if (iQ[workerName]){
+                var workerName = iQ._workerName(type),
+                    worker = iQ[workerName];
+                if (worker){
+                    //Create the function
                     iQ[type] = function(query){
 
-                        //Delete iQ.queryPromises after finished with a string of them;
-                        //Require some bookend like a .get() function
-                        iQ.queryPromises = iQ.queryPromises || [ new Promise().resolve() ];
 
-                        //Should the query be time-stamped to cache?
-                        //Indexed?
-                        //Accommodate and's, or's...
-                        iQ[workerName].postMessage({    //
-                            method: 'getPostings', 
-                            args:   { query: query },
-                            //The worker script must return in its results the query that was provided
-                            //The worker object here in the main script will route it to the correct  Promise; and resolve the Promise with the results
-                        });
+                        //The || [] is initialization; should only happen once in entire iQ script lifespan
+                        //TODO: Should initialize elsewhere; a global one-time _init, or..
+                        //if iQ becomes a class object; an prototype._init
+                        //The list will be cleared in the act of .get()
+                        iQ.queryPromises = iQ.queryPromises || [];
 
-                        iQ[workerName].queryPromises = iQ[workerName].queryPromises  || {};//a cache
-                        iQ[workerName].queryPromises.query = new Promise();
 
+
+                        //Works like a cache
+                            //Only create a Promise if one hasn't already been created for this query
+                        //TODO:Any time the index would change... clear the cache. Would change:
+                            //Scope increases; referencing an extension of this iXBRL doc or a different one altogether;
+                            //Or values are changed, or new values are created
+
+                        var stringifiedQuery = JSON.stringify(query), //So it can be used as a key; TODO: better way?
+                            promise =   worker.queryToPromise[stringifiedQuery]  || 
+                                        (worker.queryToPromise[stringifiedQuery] = new Promise(function(resolve, reject){ //aka fulfill, reject
+
+
+                                            worker.queryToPromiseResolves[stringifiedQuery] = function(postings){ resolve(postings); };
+                                            worker.queryToPromiseRejects[stringifiedQuery] = function(postings){ reject(postings); };
+                                            //TODO: Each result must know whether it should be anded, ored
+                                            //But does the worker need to know this? No... Just the worker-listener;
+                                                //Instead of assigning a Promise directly, could assign a Promise within a Promise which knew about and/or;
+                                                //A thenable within a Promise
+                                                //Or just some object 
+                                            worker.postMessage({  
+
+                                                method: 'getPostings', 
+                                                args:   { 
+                                                    query:      query,
+                                                    logical:    iQ.and_or, //a string; even though there are only two possible values, don't want to express with a boolean
+                                                    not:        iQ.not         //true or false
+                                                }
+                                                //The worker script must return in its results the query that was provided
+                                                //The worker object here in the main script will route it to the correct  Promise; and resolve the Promise with the results
+                                            });
+
+                                            
+                                        }));
+
+                        //So get() can evaluate them
+                        iQ.queryPromises.push(promise);
                         //For chainability; will intellisense work?
                         return iQ;
-
-                        //TODO: The methods aren't synchronous; need a way to await results
-                        //
                     }
             }
         });
@@ -157,7 +200,18 @@ iQ._workerSetup = function(){
 
 
 }
+//TODO: Expand these functions to accept separate iQ queries;
+//i.e. they'll act as parentheses, forcing an order of operations
+//Wouldn't it just push onto the iQ.queryPromises?
+iQ.and = function(){
+    iQ.and_or = 'and';
+    return iQ;
+}
 
+iQ.or = function(){
+    iQ.and_or = 'or';
+    return iQ;
+}
 
 iQ.prefixIt = function(it, prefix, escOrJoiner) {
     var joiner = ':';

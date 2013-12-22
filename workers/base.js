@@ -107,9 +107,13 @@ Base = {
 	},
 
 	getPostings : function(args){
-			var query = args.query || args[0],
-				filterFunc = function(object){ return true; },
+			var query = args.query,// || args[0],
+                not = args.not,//|| args[1], //not defaults to false
+                and_or = args.and_or || 'and',// || args[] //TODO: actually init iQ.and_or somewhere in iQ so the default of 'and' is clear and configurable there, rather than hidden in here
+				filterFunc = function(object){ return true; },  //Default
+                //TODO: Document
 				identityFunc = this.aspectMapper || aspectMapper, //function(object){ return object; },
+                //TODO: Document
 				resultsFunc = args.vocab || invertedIndexMapper, // || //function(object) { return object},
 				that = this;
 
@@ -127,19 +131,21 @@ Base = {
 						filterFunc = this.stringFilter(query, args);
 					}
 				}
-					//throw(new String(filterFunc));
-					//throw (new String(identityFunc));
+				//throw(new String(filterFunc));
+				//throw (new String(identityFunc));
 
-					var keyMatches = Object.keys(self.invertedIndex)
-									.map(identityFunc)				//aspectMapper by default; inflates the object
-									.filter(filterFunc),
-					//results could be IDs, which are set-operated into a resultset in main.js
-					//Or results could be something else; vocabulary for a type-ahead
-					results = keyMatches
-									.map(resultsFunc);
+				var keyMatches = Object.keys(self.invertedIndex)
+								.map(identityFunc)				//aspectMapper by default; inflates the object
+								.filter(filterFunc),
+    				//results could be IDs, which are set-operated into a resultset in main.js
+    				//Or results could be something else; vocabulary for a type-ahead
+    				results = keyMatches
+    								.map(resultsFunc);
 				//throw(new String(self.and));
 				self.postMessage({
-							results: 	self.or.apply(this,results) 
+							results: 	self.or.apply(this,results) ,
+                            query: query,
+
 							//,stats: 		this.getStats() 
 						});
 	},
@@ -175,18 +181,18 @@ reGet = function(arg, obj) {
 
 //Input: Keys/refs representing the main aspect of this worker
 //Output: Objects that that may be filtered and subsequently re-mapped into even smaller indexes
-	aspectMapper = function(k){ 
-				//Only define aspectIndex if you need to map something like
-						//string object, ISO date
-						//into complex DateContext
-				aspect = (this.aspectIndex 
+aspectMapper = function(k){ 
+			//Only define aspectIndex if you need to map something like
+					//string object, ISO date
+					//into complex DateContext
+			aspect = (this.aspectIndex 
 						&& this.aspectIndex.indexOf(k)>-1) ?
 							this.aspectIndex[k]
 							: k;
-				//Need to hold onto the key because we'll put it through invertedIndexMapper
-				//To map from keys back to  the results; IDs of value locations
-				return { key: k, aspect: aspect };
-	};
+			//Need to hold onto the key because we'll put it through invertedIndexMapper
+			//To map from keys back to  the results; IDs of value locations
+			return { key: k, aspect: aspect };
+};
 
 invertedIndexMapper = function(object){
 		if (object.key) return this.invertedIndex[object.key] || object;
