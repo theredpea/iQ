@@ -83,8 +83,8 @@ iQ._domHighlightCallback = function(event, workerName)
 iQ._promiseHandlerCallback = function(e){
 
     if (e.data.queryIndex !== undefined){
-        var resolve = iQ.queryToPromiseRejects[e.data.queryIndex],
-            reject = iQ.queryToPromiseResolves[e.data.queryIndex];
+        var resolve = this.queryToPromiseResolves[e.data.queryIndex],
+            reject = this.queryToPromiseRejects[e.data.queryIndex];
 
         if (e.data.error && reject){
             reject(e.data);
@@ -105,11 +105,7 @@ iQ._promiseHandlerCallback = function(e){
 
 iQ._workerSetup = function(){
 
-            iQ.queryPromises = [];
-
-            //TODO: Remove these
-            iQ.queryToPromiseResolves=[];
-            iQ.queryToPromiseRejects =  [];
+        iQ.queryPromises = [];
 
         //All Workers
         //========================
@@ -121,7 +117,7 @@ iQ._workerSetup = function(){
             //Worker
                 worker              = iQ[workerName] = iQ[workerName] || new Worker(workerFile),
             //Function (Callback) //Only one of them at a time
-                workerCallback      = iQ[workerCallbackName] = iQ._promiseHandlerCallback;//.bind(worker);
+                workerCallback      = iQ[workerCallbackName] = iQ._promiseHandlerCallback.bind(worker);
 
 
             //Only used by _queryableWorkers... ? Actually would be used by any worker that returns results; flesh out difference
@@ -178,7 +174,6 @@ iQ._workerSetup = function(){
                             //  ({before:'20121231', after:'20120101'}).toString()      === '[object Object]'
 
                         var indexableQuery = query.toString()==='[object Object]' ? JSON.stringify(query) : query.toString();
-                        var queryMessageEvent = 'message.'+indexableQuery;
                         var queryIndex = worker.queryHistory.indexOf(indexableQuery) >-1 ? 
                                             worker.queryHistory.indexOf(indexableQuery) 
                                             : worker.queryHistory.push(indexableQuery)-1; //push returns the length, not the index 
@@ -188,23 +183,14 @@ iQ._workerSetup = function(){
                         var promise =   worker.queryToPromise[queryHash];
 
                         if (!promise){
-                            //worker.queryToPromise[queryHash]= 
-                            promise = new Promise(function(resolve, reject){ //aka fulfill, reject
-                                            /*
-                                            worker.addEventListener('message', function(event){
+                            worker.queryToPromise[queryHash]=  promise = new Promise(function(resolve, reject){ //aka fulfill, reject
 
-                                                if (event.data.queryIndex === queryIndex){
-                                                    resolve(event.data);
-                                                }
-                                            });
-                                            */
-
-                                            iQ.queryToPromiseResolves.push(resolve);
+                                            worker.queryToPromiseResolves[queryHash] =resolve;
                                                 /*
                                                 function(postings){ 
                                                     resolve(postings); };   //New line to set a breakpoint
                                                     */
-                                            iQ.queryToPromiseRejects.push(reject);
+                                            worker.queryToPromiseRejects[queryHash] =reject;
                                                 /*
                                                 function(postings){ 
                                                     reject(postings); };   //New line to set a breakpoint
@@ -219,7 +205,6 @@ iQ._workerSetup = function(){
 
                                                 method: 'getPostings', 
                                                 args:   { 
-                                                    queryMessageEvent : queryMessageEvent,
                                                     queryIndex: queryIndex,
                                                     query:      query,
                                                     logical:    iQ.and_or, //a string; even though there are only two possible values, don't want to express with a boolean
