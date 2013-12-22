@@ -80,28 +80,37 @@ iQ._domHighlightCallback = function(event, workerName)
 };
 
 
-//TODO: This "createCallback" pattern, overkill?
-//Mostly nice when you want to know which worker it is... 
-//TODO: Check Is the worker set to 'this'? Then just attach its properties; name etc, to it
-//this is iQ; just use call
-iQ._createDomHighlightCallback = function(workerName){ 
-    return function(e){ iQ._domHighlightCallback(e, workerName); };
+iQ._promiseHandlerCallback = function(e){
+
+    if (e.data.queryIndex !== undefined){
+        var resolve = iQ.queryToPromiseRejects[e.data.queryIndex],
+            reject = iQ.queryToPromiseResolves[e.data.queryIndex];
+
+        if (e.data.error && reject){
+            reject(e.data);
+            //return;
+        }
+        else if (resolve) {
+            resolve(e.data);
+            //return;
+        }
+
+    }
+    console.log(e);
+    return;
+
 };
 
-
-iQ._promiseHandlerCallback = function(e, workerName){
-
-    console.log(e.data);
-
-};
-
-
-iQ._createPromiseHandlerCallback = function(workerName){ 
-    return function(e){ iQ._promiseHandlerCallback(e, workerName); };
-};
 
 
 iQ._workerSetup = function(){
+
+            iQ.queryPromises = [];
+
+            //TODO: Remove these
+            iQ.queryToPromiseResolves=[];
+            iQ.queryToPromiseRejects =  [];
+
         //All Workers
         //========================
         iQ._workers.forEach(function(type){
@@ -112,7 +121,7 @@ iQ._workerSetup = function(){
             //Worker
                 worker              = iQ[workerName] = iQ[workerName] || new Worker(workerFile),
             //Function (Callback) //Only one of them at a time
-                workerCallback      = iQ[workerCallbackName] = iQ._createPromiseHandlerCallback(workerName);
+                workerCallback      = iQ[workerCallbackName] = iQ._promiseHandlerCallback;//.bind(worker);
 
 
             //Only used by _queryableWorkers... ? Actually would be used by any worker that returns results; flesh out difference
@@ -120,6 +129,7 @@ iQ._workerSetup = function(){
             worker.queryHistory =           [];
             worker.queryToPromiseResolves = {};
             worker.queryToPromiseRejects =  {};
+
 
             worker.addEventListener('message', workerCallback,false);
 
@@ -149,12 +159,6 @@ iQ._workerSetup = function(){
                     iQ[type] = function(query){
 
 
-                        //The || [] is initialization; should only happen once in entire iQ script lifespan
-                        //TODO: Should initialize elsewhere; a global one-time _init, or..
-                        //if iQ becomes a class object; an prototype._init
-                        //The list will be cleared in the act of .get()
-                        iQ.queryPromises = iQ.queryPromises || [];
-
 
 
                         //Works like a cache
@@ -173,27 +177,49 @@ iQ._workerSetup = function(){
                             //  function (o){return o.name==='cash'}.toString()         === 'function (o){return o.name==='cash'}'
                             //  ({before:'20121231', after:'20120101'}).toString()      === '[object Object]'
 
-                        var indexableQuery = query.toString()==='[object Object]' ? JSON.stringify(query) : query.toString(),
-                            queryIndex = worker.queryHistory.indexOf(indexableQuery) >-1 ? worker.queryHistory.indexOf(indexableQuery) : worker.queryHistory.push(indexableQuery), 
-                            queryHash = queryIndex, //JSON.stringify(query), //To hash it. NOTE:  http://stackoverflow.com/q/194846
+                        var indexableQuery = query.toString()==='[object Object]' ? JSON.stringify(query) : query.toString();
+                        var queryMessageEvent = 'message.'+indexableQuery;
+                        var queryIndex = worker.queryHistory.indexOf(indexableQuery) >-1 ? 
+                                            worker.queryHistory.indexOf(indexableQuery) 
+                                            : worker.queryHistory.push(indexableQuery)-1; //push returns the length, not the index 
+                        var queryHash = queryIndex; //JSON.stringify(query), //To hash it. NOTE:  http://stackoverflow.com/q/194846
                             
                             //Question, can it be identified coming out again? 
-                            promise =   worker.queryToPromise[queryHash]  || 
-                                        (worker.queryToPromise[queryHash] = new Promise(function(resolve, reject){ //aka fulfill, reject
+                        var promise =   worker.queryToPromise[queryHash];
 
-                                            worker.queryToPromiseResolves[queryHash] = function(postings){ 
-                                                resolve(postings); };   //New line to set a breakpoint
-                                            worker.queryToPromiseRejects[queryHash] = function(postings){ 
-                                                reject(postings); };   //New line to set a breakpoint
-                                            //TODO: Each result must know whether it should be anded, ored
-                                            //But does the worker need to know this? No... Just the worker-listener;
-                                                //Instead of assigning a Promise directly, could assign a Promise within a Promise which knew about and/or;
-                                                //A thenable within a Promise
-                                                //Or just some object 
+                        if (!promise){
+                            //worker.queryToPromise[queryHash]= 
+                            promise = new Promise(function(resolve, reject){ //aka fulfill, reject
+                                            /*
+                                            worker.addEventListener('message', function(event){
+
+                                                if (event.data.queryIndex === queryIndex){
+                                                    resolve(event.data);
+                                                }
+                                            });
+                                            */
+
+                                            iQ.queryToPromiseResolves.push(resolve);
+                                                /*
+                                                function(postings){ 
+                                                    resolve(postings); };   //New line to set a breakpoint
+                                                    */
+                                            iQ.queryToPromiseRejects.push(reject);
+                                                /*
+                                                function(postings){ 
+                                                    reject(postings); };   //New line to set a breakpoint
+                                                    */
+                                                //TODO: Each result must know whether it should be anded, ored
+                                                //But does the worker need to know this? No... Just the worker-listener;
+                                                    //Instead of assigning a Promise directly, could assign a Promise within a Promise which knew about and/or;
+                                                    //A thenable within a Promise
+                                                    //Or just some object 
+
                                             worker.postMessage({  
 
                                                 method: 'getPostings', 
                                                 args:   { 
+                                                    queryMessageEvent : queryMessageEvent,
                                                     queryIndex: queryIndex,
                                                     query:      query,
                                                     logical:    iQ.and_or, //a string; even though there are only two possible values, don't want to express with a boolean
@@ -204,8 +230,8 @@ iQ._workerSetup = function(){
                                             });
 
                                             
-                                        }));
-
+                                        });
+                        }
                         //So get() can evaluate them
                         iQ.queryPromises.push(promise);
                         //For chainability; will intellisense work?
