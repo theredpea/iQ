@@ -83,20 +83,18 @@ iQ._domHighlightCallback = function(event, workerName)
 iQ._promiseHandlerCallback = function(e){
 
     if (e.data.queryIndex !== undefined){
-        var resolve = iQ.queryToPromiseRejects[e.data.queryIndex],
-            reject = iQ.queryToPromiseResolves[e.data.queryIndex];
+        var resolve = window.queryToPromiseResolves[e.data.queryIndex],
+            reject = window.queryToPromiseRejects[e.data.queryIndex];
 
         if (e.data.error && reject){
             reject(e.data);
-            //return;
         }
         else if (resolve) {
             resolve(e.data);
-            //return;
         }
 
     }
-    console.log(e);
+    //console.log(e);
     return;
 
 };
@@ -110,6 +108,9 @@ iQ._workerSetup = function(){
             //TODO: Remove these
             iQ.queryToPromiseResolves=[];
             iQ.queryToPromiseRejects =  [];
+            window.queryToPromiseResolves=[];
+            window.queryToPromiseRejects =  [];
+            window.queryPromises=[];
 
         //All Workers
         //========================
@@ -151,60 +152,56 @@ iQ._workerSetup = function(){
 
         //Queryable Workers
         //========================
+        ['d'].forEach(function(d,i){ window.promises = [new Promise(function(resolve, reject){ window.promiseResolves=[resolve] })]})
+
+
         iQ._queryableWorkers.forEach(function(type){
+            /*
                 var workerName = iQ._workerName(type),
                     worker = iQ[workerName];
                 if (worker){
                     //Create the function
-                    iQ[type] = function(query){
+                    iQ[type] = 
+                    //
+            }
+        */
+        }
+        );
 
 
 
 
-                        //Works like a cache
-                            //Only create a Promise if one hasn't already been created for this query
-                        //TODO:Any time the index would change... clear the cache. Would change:
-                            //Scope increases; referencing an extension of this iXBRL doc or a different one altogether;
-                            //Or values are changed, or new values are created
-                        //NOTE: queries can be many things; strings, objects, functions, regex's
-                            //  JSON.stringify('cash')                                  === '"cash"'
-                            //  JSON.stringify(/cash/g)                                 === '{}'
-                            //  JSON.stringify(function(o){return o.name==='cash'})     === undefined
-                            //  JSON.stringify({before:'20121231', after:'20120101'})   === '{"before":"20121231","after":"20120101"}'
+}
+iQ.test = function(){
+    window.ps = window.ps||[];
+    window.res = window.res||[];
+    window.rej = window.rej||[];
+    p = new Promise(function(resolve, reject){
+        window.res.push(resolve);
+        window.rej.push(reject);
+    });
+    window.ps.push(p);
 
-                            //  'cash'.toString()                                       === 'cash'
-                            //  /cash/g.toSring()                                       === '/cash/g'
-                            //  function (o){return o.name==='cash'}.toString()         === 'function (o){return o.name==='cash'}'
-                            //  ({before:'20121231', after:'20120101'}).toString()      === '[object Object]'
+}
+var i =0;
+iQ.name = function(query){
 
-                        var indexableQuery = query.toString()==='[object Object]' ? JSON.stringify(query) : query.toString();
-                        var queryMessageEvent = 'message.'+indexableQuery;
-                        var queryIndex = worker.queryHistory.indexOf(indexableQuery) >-1 ? 
-                                            worker.queryHistory.indexOf(indexableQuery) 
-                                            : worker.queryHistory.push(indexableQuery)-1; //push returns the length, not the index 
-                        var queryHash = queryIndex; //JSON.stringify(query), //To hash it. NOTE:  http://stackoverflow.com/q/194846
-                            
                             //Question, can it be identified coming out again? 
-                        var promise =   worker.queryToPromise[queryHash];
+                        var queryHash = query,
+                            worker = iQ.nameWorker,
+                            promise;
+
 
                         if (!promise){
                             //worker.queryToPromise[queryHash]= 
                             promise = new Promise(function(resolve, reject){ //aka fulfill, reject
-                                            /*
-                                            worker.addEventListener('message', function(event){
 
-                                                if (event.data.queryIndex === queryIndex){
-                                                    resolve(event.data);
-                                                }
-                                            });
-                                            */
-
-                                            iQ.queryToPromiseResolves.push(resolve);
+                                            window.queryToPromiseResolves.push(resolve);
                                                 /*
                                                 function(postings){ 
                                                     resolve(postings); };   //New line to set a breakpoint
                                                     */
-                                            iQ.queryToPromiseRejects.push(reject);
+                                            window.queryToPromiseRejects.push(reject);
                                                 /*
                                                 function(postings){ 
                                                     reject(postings); };   //New line to set a breakpoint
@@ -219,31 +216,23 @@ iQ._workerSetup = function(){
 
                                                 method: 'getPostings', 
                                                 args:   { 
-                                                    queryMessageEvent : queryMessageEvent,
-                                                    queryIndex: queryIndex,
                                                     query:      query,
-                                                    logical:    iQ.and_or, //a string; even though there are only two possible values, don't want to express with a boolean
-                                                    not:        iQ.not         //true or false
+                                                    queryIndex : i
                                                 }
                                                 //The worker script must return in its results the query that was provided
                                                 //The worker object here in the main script will route it to the correct  Promise; and resolve the Promise with the results
                                             });
 
+                                            i++;
                                             
                                         });
                         }
                         //So get() can evaluate them
-                        iQ.queryPromises.push(promise);
+                        window.queryPromises.push(promise);
                         //For chainability; will intellisense work?
                         return iQ;
                     }
-            }
-        });
 
-
-
-
-}
 //TODO: Expand these functions to accept separate iQ queries;
 //i.e. they'll act as parentheses, forcing an order of operations
 //Wouldn't it just push onto the iQ.queryPromises?
