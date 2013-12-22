@@ -109,7 +109,9 @@ Base = {
 	getPostings : function(args){
 			var query = args.query,// || args[0],
                 not = args.not,//|| args[1], //not defaults to false
-                and_or = args.and_or || 'and',// || args[] //TODO: actually init iQ.and_or somewhere in iQ so the default of 'and' is clear and configurable there, rather than hidden in here
+                and_or = args.and_or || 'and',// || args[] 
+                //TODO: Just return all the args
+                //TODO: actually init iQ.and_or somewhere in iQ so the default of 'and' is clear and configurable there, rather than hidden in here
 				filterFunc = function(object){ return true; },  //Default
                 //TODO: Document
 				identityFunc = this.aspectMapper || aspectMapper, //function(object){ return object; },
@@ -142,12 +144,10 @@ Base = {
     				results = keyMatches
     								.map(resultsFunc);
 				//throw(new String(self.and));
-				self.postMessage({
-							results: 	self.or.apply(this,results) ,
-                            query: query,
+                //TODO: How does or work? Shouldn't main script handle "and/or"ing
+                args.results = self.or.apply(this,results);
 
-							//,stats: 		this.getStats() 
-						});
+				self.postMessage(args);
 	},
 
 

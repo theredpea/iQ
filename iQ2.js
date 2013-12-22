@@ -83,6 +83,7 @@ iQ._domHighlightCallback = function(event, workerName)
 //TODO: This "createCallback" pattern, overkill?
 //Mostly nice when you want to know which worker it is... 
 //TODO: Check Is the worker set to 'this'? Then just attach its properties; name etc, to it
+//this is iQ; just use call
 iQ._createDomHighlightCallback = function(workerName){ 
     return function(e){ iQ._domHighlightCallback(e, workerName); };
 };
@@ -90,7 +91,7 @@ iQ._createDomHighlightCallback = function(workerName){
 
 iQ._promiseHandlerCallback = function(e, workerName){
 
-    alert('hey');
+    console.log(e.data);
 
 };
 
@@ -111,11 +112,12 @@ iQ._workerSetup = function(){
             //Worker
                 worker              = iQ[workerName] = iQ[workerName] || new Worker(workerFile),
             //Function (Callback) //Only one of them at a time
-                workerCallback      = iQ[workerCallbackName] = iQ._createDomHighlightCallback(workerName);
+                workerCallback      = iQ[workerCallbackName] = iQ._createPromiseHandlerCallback(workerName);
 
 
             //Only used by _queryableWorkers... ? Actually would be used by any worker that returns results; flesh out difference
             worker.queryToPromise =         {};
+            worker.queryHistory =           [];
             worker.queryToPromiseResolves = {};
             worker.queryToPromiseRejects =  {};
 
@@ -160,14 +162,29 @@ iQ._workerSetup = function(){
                         //TODO:Any time the index would change... clear the cache. Would change:
                             //Scope increases; referencing an extension of this iXBRL doc or a different one altogether;
                             //Or values are changed, or new values are created
+                        //NOTE: queries can be many things; strings, objects, functions, regex's
+                            //  JSON.stringify('cash')                                  === '"cash"'
+                            //  JSON.stringify(/cash/g)                                 === '{}'
+                            //  JSON.stringify(function(o){return o.name==='cash'})     === undefined
+                            //  JSON.stringify({before:'20121231', after:'20120101'})   === '{"before":"20121231","after":"20120101"}'
 
-                        var stringifiedQuery = JSON.stringify(query), //So it can be used as a key; TODO: better way?
-                            promise =   worker.queryToPromise[stringifiedQuery]  || 
-                                        (worker.queryToPromise[stringifiedQuery] = new Promise(function(resolve, reject){ //aka fulfill, reject
+                            //  'cash'.toString()                                       === 'cash'
+                            //  /cash/g.toSring()                                       === '/cash/g'
+                            //  function (o){return o.name==='cash'}.toString()         === 'function (o){return o.name==='cash'}'
+                            //  ({before:'20121231', after:'20120101'}).toString()      === '[object Object]'
 
+                        var indexableQuery = query.toString()==='[object Object]' ? JSON.stringify(query) : query.toString(),
+                            queryIndex = worker.queryHistory.indexOf(indexableQuery) >-1 ? worker.queryHistory.indexOf(indexableQuery) : worker.queryHistory.push(indexableQuery), 
+                            queryHash = queryIndex, //JSON.stringify(query), //To hash it. NOTE:  http://stackoverflow.com/q/194846
+                            
+                            //Question, can it be identified coming out again? 
+                            promise =   worker.queryToPromise[queryHash]  || 
+                                        (worker.queryToPromise[queryHash] = new Promise(function(resolve, reject){ //aka fulfill, reject
 
-                                            worker.queryToPromiseResolves[stringifiedQuery] = function(postings){ resolve(postings); };
-                                            worker.queryToPromiseRejects[stringifiedQuery] = function(postings){ reject(postings); };
+                                            worker.queryToPromiseResolves[queryHash] = function(postings){ 
+                                                resolve(postings); };   //New line to set a breakpoint
+                                            worker.queryToPromiseRejects[queryHash] = function(postings){ 
+                                                reject(postings); };   //New line to set a breakpoint
                                             //TODO: Each result must know whether it should be anded, ored
                                             //But does the worker need to know this? No... Just the worker-listener;
                                                 //Instead of assigning a Promise directly, could assign a Promise within a Promise which knew about and/or;
@@ -177,6 +194,7 @@ iQ._workerSetup = function(){
 
                                                 method: 'getPostings', 
                                                 args:   { 
+                                                    queryIndex: queryIndex,
                                                     query:      query,
                                                     logical:    iQ.and_or, //a string; even though there are only two possible values, don't want to express with a boolean
                                                     not:        iQ.not         //true or false
@@ -580,4 +598,4 @@ iQ._average = function()
 
 iQ._processHeader();
 iQ._index();
-//iQ._workerSetup();
+iQ._workerSetup();
