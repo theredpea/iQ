@@ -83,20 +83,23 @@ iQ._domHighlightCallback = function(event, workerName)
 iQ._promiseHandlerCallback = function(e){
 
     if (e.data.queryIndex !== undefined){
+<<<<<<< HEAD
+        var resolve = window.queryToPromiseResolves[e.data.queryIndex],
+            reject = window.queryToPromiseRejects[e.data.queryIndex];
+=======
         var resolve = this.queryToPromiseResolves[e.data.queryIndex],
             reject = this.queryToPromiseRejects[e.data.queryIndex];
+>>>>>>> d114a6e0acce9a2023462540e444d804a4dc2f18
 
         if (e.data.error && reject){
             reject(e.data);
-            //return;
         }
         else if (resolve) {
             resolve(e.data);
-            //return;
         }
 
     }
-    console.log(e);
+    //console.log(e);
     return;
 
 };
@@ -105,8 +108,18 @@ iQ._promiseHandlerCallback = function(e){
 
 iQ._workerSetup = function(){
 
+<<<<<<< HEAD
+            iQ.queryPromises = [];
+
+            //TODO: Remove these
+            iQ.queryToPromiseResolves=[];
+            iQ.queryToPromiseRejects =  [];
+            window.queryToPromiseResolves=[];
+            window.queryToPromiseRejects =  [];
+            window.queryPromises=[];
+=======
         iQ.queryPromises = [];
-        iQ.and_or = 'and';
+>>>>>>> d114a6e0acce9a2023462540e444d804a4dc2f18
 
         //All Workers
         //========================
@@ -148,16 +161,46 @@ iQ._workerSetup = function(){
 
         //Queryable Workers
         //========================
+        ['d'].forEach(function(d,i){ window.promises = [new Promise(function(resolve, reject){ window.promiseResolves=[resolve] })]})
+
+
         iQ._queryableWorkers.forEach(function(type){
+            /*
                 var workerName = iQ._workerName(type),
                     worker = iQ[workerName];
                 if (worker){
                     //Create the function
+<<<<<<< HEAD
+                    iQ[type] = 
+                    //
+            }
+        */
+        }
+        );
+=======
                     iQ[type] = function(query){
+>>>>>>> d114a6e0acce9a2023462540e444d804a4dc2f18
 
 
 
 
+<<<<<<< HEAD
+}
+iQ.test = function(){
+    window.ps = window.ps||[];
+    window.res = window.res||[];
+    window.rej = window.rej||[];
+    p = new Promise(function(resolve, reject){
+        window.res.push(resolve);
+        window.rej.push(reject);
+    });
+    window.ps.push(p);
+
+}
+var i =0;
+iQ.name = function(query){
+
+=======
                         //Works like a cache
                             //Only create a Promise if one hasn't already been created for this query
                         //TODO:Any time the index would change... clear the cache. Would change:
@@ -180,18 +223,33 @@ iQ._workerSetup = function(){
                                             : worker.queryHistory.push(indexableQuery)-1; //push returns the length, not the index 
                         var queryHash = queryIndex; //JSON.stringify(query), //To hash it. NOTE:  http://stackoverflow.com/q/194846
                             
+>>>>>>> d114a6e0acce9a2023462540e444d804a4dc2f18
                             //Question, can it be identified coming out again? 
-                        var promise =   worker.queryToPromise[queryHash];
+                        var queryHash = query,
+                            worker = iQ.nameWorker,
+                            promise;
+
 
                         if (!promise){
+<<<<<<< HEAD
+                            //worker.queryToPromise[queryHash]= 
+                            promise = new Promise(function(resolve, reject){ //aka fulfill, reject
+
+                                            window.queryToPromiseResolves.push(resolve);
+=======
                             worker.queryToPromise[queryHash]=  promise = new Promise(function(resolve, reject){ //aka fulfill, reject
 
                                             worker.queryToPromiseResolves[queryHash] =resolve;
+>>>>>>> d114a6e0acce9a2023462540e444d804a4dc2f18
                                                 /*
                                                 function(postings){ 
                                                     resolve(postings); };   //New line to set a breakpoint
                                                     */
+<<<<<<< HEAD
+                                            window.queryToPromiseRejects.push(reject);
+=======
                                             worker.queryToPromiseRejects[queryHash] =reject;
+>>>>>>> d114a6e0acce9a2023462540e444d804a4dc2f18
                                                 /*
                                                 function(postings){ 
                                                     reject(postings); };   //New line to set a breakpoint
@@ -206,30 +264,27 @@ iQ._workerSetup = function(){
 
                                                 method: 'getPostings', 
                                                 args:   { 
+<<<<<<< HEAD
+=======
                                                     queryIndex: queryIndex,
+>>>>>>> d114a6e0acce9a2023462540e444d804a4dc2f18
                                                     query:      query,
-                                                    and_or:    iQ.and_or || 'and', //a string; even though there are only two possible values, don't want to express with a boolean
-                                                    not:        iQ.not         //true or false
+                                                    queryIndex : i
                                                 }
                                                 //The worker script must return in its results the query that was provided
                                                 //The worker object here in the main script will route it to the correct  Promise; and resolve the Promise with the results
                                             });
 
+                                            i++;
                                             
                                         });
                         }
                         //So get() can evaluate them
-                        iQ.queryPromises.push(promise);
+                        window.queryPromises.push(promise);
                         //For chainability; will intellisense work?
                         return iQ;
                     }
-            }
-        });
 
-
-
-
-}
 //TODO: Expand these functions to accept separate iQ queries;
 //i.e. they'll act as parentheses, forcing an order of operations
 //Wouldn't it just push onto the iQ.queryPromises?
