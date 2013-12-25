@@ -1,6 +1,12 @@
 
 
-iQ = {};
+iQ = function(options){
+    if (!(this instanceof iQ))   //http://ejohn.org/blog/simple-class-instantiation/
+        return new iQ(options);
+    else
+        this.options = options;
+};
+
 
 ///non-value Elements
  iQ.nvElements = [
@@ -153,7 +159,7 @@ iQ._workerSetup = function(){
                     worker = iQ[workerName];
                 if (worker){
                     //Create the function
-                    iQ[type] = function(query){
+                    iQ.prototype[type] = function(query){
 
 
 
@@ -219,9 +225,9 @@ iQ._workerSetup = function(){
                                         });
                         }
                         //So get() can evaluate them
-                        iQ.queryPromises.push(promise);
+                        this.queryPromises.push(promise);
                         //For chainability; will intellisense work?
-                        return iQ;
+                        return this;
                     }
             }
         });
