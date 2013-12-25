@@ -3,9 +3,55 @@
 iQ = function(options){
     if (!(this instanceof iQ))   //http://ejohn.org/blog/simple-class-instantiation/
         return new iQ(options);
-    else
-        this.options = options;
+    
+    this.options = {
+        and_or: 'and'        
+    };
+
+    for (option in options) this.options[option] = options[option]; //Extend
+
+    //Push onto this list when running a query like name('cash')
+    //Then get its results later
+    this.queryPromises = [];
+
 };
+
+iQ.prototype.get = function(){
+
+    if (this.queryPromises && this.queryPromises.length){
+
+        //https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/Reduce
+        this.queryPromises.reduce(function(previousPromise, currentPromise, index, queryPromises){
+
+            /*//Force them to be evaluated in sequence http://www.html5rocks.com/en/tutorials/es6/promises/
+
+            return previousPromise
+            .then(function(previousPostings){
+                console.log(previousPostings);
+                return currentPromise;  
+            }).then(function(currentPostings){
+                console.log(currentPostings);
+                iQ.andOrPostings(postings);
+            });
+            */
+
+            return Promise.all(previousPromise, currentPromise)
+                    .then(function(previousPostings, currentPostings){
+                        return new Promise(function(resolve, reject){
+                            //TODO: Make this asynchronous also using a set worker
+                            resolve(previou)
+
+                        });
+                    })
+        })
+    }
+    else{
+        return;
+    }
+
+};
+
+iQ.andOrPostings
 
 
 ///non-value Elements
@@ -40,21 +86,25 @@ iQ._workerFileName = function(type){
 };
 
 iQ._workerName = function(type){
+    type = type.split('/').slice(-1);
 	return type + 'Worker';
 };
 
 iQ._workerCallbackName = function(type){
-    return '_on' + type + 'WorkerCallback';
+    return '_on' + type + 'Callback'; //WorkerCallback';
 };
 
 //Workers
 //Currently there are workers for individual aspects
-//But could 
-//See #workerHierarchy
+//See #workerHierarchy for a different ideas
 iQ._workers = [
     'name', 
     'unit', 
-    'date'];
+    'date',
+
+    'utility/set'
+    ];
+
 //Each is made into an iQ function which directly maps to a worker
 iQ._queryableWorkers = [
     'name',
@@ -69,7 +119,7 @@ iQ._domHighlightCallback = function(event, workerName)
     //alert('Got results from worker: ' + workerName);
     //iQ.results = iQ.results || {};
     //iQ.results[workerName] = event.data;
-    console.log(event.data);
+    //console.log(event.data);
     if (event.data.results instanceof Array)
     {
         iQ.forEachNode(iQ
@@ -102,7 +152,7 @@ iQ._promiseHandlerCallback = function(e){
         }
 
     }
-    console.log(e);
+    //console.log(e);
     return;
 
 };
@@ -120,7 +170,9 @@ iQ._workerSetup = function(){
             //Strings
             var workerName          = iQ._workerName(type),
                 workerFile          = iQ._workerFileName(type),
-                workerCallbackName  = iQ._workerCallbackName(type),
+                workerCallbackName  = iQ._workerCallbackName(workerName), //iQ._workerCallbackName(type),
+
+            //TODO: Consider nesting these inside a worker object; and a callback object respectively so we don't pollute iQ namespace
             //Worker
                 worker              = iQ[workerName] = iQ[workerName] || new Worker(workerFile),
             //Function (Callback) //Only one of them at a time
@@ -145,6 +197,8 @@ iQ._workerSetup = function(){
             	args.aspectIndex = aspectIndex; 
             }
 
+            //TODO: Separate set which does not have this method;
+            //Do this only with the queryableWorkers
             iQ[workerName].postMessage({
             	method: 'makeInvertedIndex', 
             	args: args,

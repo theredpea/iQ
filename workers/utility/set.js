@@ -1,4 +1,16 @@
- function sortArgsLengthAscending(argumentsFromAnotherFunction){
+importScripts('../base.js');
+
+self.prototype = self.Base;
+
+addEventListener('message', function(event){ self.prototype.onMessage.call(self,event) }, false);
+
+init = function(args){
+
+};
+
+//All based on http://jsperf.com/union-array-faster/5 to use fastest union/intersection logic
+
+function sortArgsLengthAscending(argumentsFromAnotherFunction){
 
  	//sortFunc
  	//Returns less-than-zero if i comes first
@@ -14,23 +26,25 @@
 
  function lengthAscending(i,j){return i.length-j.length;};
 
- function and(a,b){
+ function and(args){
+ 	/*
  	var args=Array.prototype.slice.call(arguments, 0);
  	args.sort(lengthAscending);//sortArgsLengthAscending(arguments);
-
+	*/
  	//throw(args.length);
  	//throw(args);
  	//Optimization
- 	return intersection.apply(this, args);
+ 	self.postMessage(intersection.apply(this, args));
 
  }
 
 
 
- function or(a,b){
- 	var args=arguments;
+ function or(args){
+ 	//Base.js uses call(); therefore arguments will come in directly
+
  	//args.sort(function(i,j){return j.length-i.length;});
- 	return union.apply(this, args);
+ 	self.postMessage(union.apply(this, args));
 
  }
 

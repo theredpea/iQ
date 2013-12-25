@@ -1,4 +1,4 @@
-importScripts('utility/set.js');
+//importScripts('utility/set.js');
 
 Base = { 
     onMessage: function(event){
@@ -16,7 +16,7 @@ Base = {
 
     init: function(args){
 
-
+        //Like Underscore's _once
         if(!this.initted){
             //Map; 
                 //keys are the value of the iXBRL object's relevant property; for a dateWorker it's a iQ's context:DateContext; for a nameWorker it's a value's name:String
@@ -42,6 +42,10 @@ Base = {
     },
 
     makeInvertedIndex : function(args){
+
+        //TODO: Only because set.js doesn't have this method.
+        if (!this.getInvertedKey) return; //
+
         var originalIndex = args.originalIndex  || args[0] || [],	//It's the first arg;
             reset =         args.reset          || args[1] || false;
 
