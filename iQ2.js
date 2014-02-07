@@ -1,4 +1,7 @@
+requirejs(['../scripts/q'],
+    function(Q){
 
+window.Q = Q;
 
 iQ = function(options){
     if (!(this instanceof iQ))   //http://ejohn.org/blog/simple-class-instantiation/
@@ -12,43 +15,36 @@ iQ = function(options){
 
     //Push onto this list when running a query like name('cash')
     //Then get its results later
-    this.queryPromises = [];
+    this.queryDeferreds = [];
 
 };
 
-iQ.prototype.get = function(){
-
-    if (this.queryPromises && this.queryPromises.length){
+iQ.prototype.get = function(onFulfilled,onRejected, onProgress){
+    var results =[];
+    if (this.queryDeferreds && this.queryDeferreds.reduce){
 
         //https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/Reduce
-        this.queryPromises.reduce(function(previousPromise, currentPromise, index, queryPromises){
+        results = this.queryDeferreds
+                .map(function(el, index){ return el.promise; })
+                .reduce(function(previousPromise, currentPromise, index, queryPromises){
 
-            /*//Force them to be evaluated in sequence http://www.html5rocks.com/en/tutorials/es6/promises/
+            //Once both are finished
+            //TODO: Could use a progress method on this consolidated promise;
+            return Q.all([previousPromise, currentPromise])
+                    .spread(function(prev, curr){
 
-            return previousPromise
-            .then(function(previousPostings){
-                console.log(previousPostings);
-                return currentPromise;  
-            }).then(function(currentPostings){
-                console.log(currentPostings);
-                iQ.andOrPostings(postings);
-            });
-            */
+                        return iQ.setWorker.deferredWork(curr.and_or,
+                            {0:prev.results, 1:curr.results, flatten:true},
+                            (prev.results.toString() + curr.results.toString())
+                            ).promise;
 
-            return Promise.all(previousPromise, currentPromise)
-                    .then(function(previousPostings, currentPostings){
-                        return new Promise(function(resolve, reject){
-                            //TODO: Make this asynchronous also using a set worker
-                            resolve(previou)
 
-                        });
-                    })
-        })
-    }
-    else{
-        return;
-    }
+                        
+                    });
+                })  //No need for [initialValue]
+}
 
+    return results.done(onFulfilled,onRejected, onProgress);
 };
 
 iQ.andOrPostings
@@ -106,27 +102,35 @@ iQ._workers = [
     ];
 
 //Each is made into an iQ function which directly maps to a worker
-iQ._queryableWorkers = [
+iQ._queryableWorkers = 
+iQ._workers;
+
+[
     'name',
     'unit',
     'date'
 ];
+//Just like setWorker.js
+iQ.flatten= function(twoDimArray){
+    //http://stackoverflow.com/questions/10865025/merge-flatten-an-array-of-arrays-in-javascript
+    var flattened = [];
+    return flattened.concat.apply(flattened, twoDimArray);
+};
+/*
+iQ._f = function(f){
+    return function(){
+        return f.apply(f, arguments);
+    }
+};
+*/
 
-
-iQ._domHighlightCallback = function(event, workerName)
+iQ._dom = function(e)
 {
-    //event.data contains an array of values
-    //alert('Got results from worker: ' + workerName);
-    //iQ.results = iQ.results || {};
-    //iQ.results[workerName] = event.data;
-    //console.log(event.data);
-    if (event.data.results instanceof Array)
+    if (e.results)
     {
-        iQ.forEachNode(iQ
-                        .flatten(event.data.results)
-                        .map(function(id){
-                                    return document.getElementById(id);
-                                }),
+        iQ.forEachNode(//iQ.flatten(event.results)
+                        e.results
+                        .map(function(i){ return document.getElementById(i) }),//Illegal InvocationiQ._f(documents.getElementById)),
                         function(n){
                             n.style.backgroundColor = 'green';
                         }
@@ -136,28 +140,62 @@ iQ._domHighlightCallback = function(event, workerName)
 };
 
 
-iQ._promiseHandlerCallback = function(e){
+iQ._deferredWorkResponseCallback = function(e){
+    //this refers to the Worker; since we used .bind();
+    //The worker is attached to iQ global object, so it can be used by any instantiated iQ objects
+    //e.data.queryIndex could be 0!
+    if (e.data.workHash!==undefined){
 
-    if (e.data.queryIndex !== undefined){
-        var resolve = this.queryToPromiseResolves[e.data.queryIndex],
-            reject = this.queryToPromiseRejects[e.data.queryIndex];
+        var deferred = this.workToDeferred[e.data.workHash];
 
-        if (e.data.error && reject){
-            reject(e.data);
-            //return;
+        if (e.data.error && deferred.reject){
+            deferred.reject(e.data);
         }
-        else if (resolve) {
-            resolve(e.data);
-            //return;
+        else if (deferred.resolve) {
+            deferred.resolve(e.data);
         }
 
     }
-    //console.log(e);
-    return;
 
 };
 
+/*
+PromiseWorker = function(){
+    Worker.apply(this, arguments);
+};
+PromiseWorker.prototype = Worker.prototype;
+*/
 
+//Should the args by an object?
+Worker.prototype.deferredWork = function(method, args, hashable){
+                        //Each worker has a list;
+
+    var hash = iQ._stringHash(hashable),
+        index,
+        hashIndex = (index = this.workHistory.indexOf(hash))>-1 ? index : this.workHistory.push(hash)-1, //push returns the length, not the index 
+        hash = hashIndex; //JSON.stringify(query), //To hash it. NOTE:  http://stackoverflow.com/q/194846
+                        
+
+    if (this.workToDeferred===undefined) this.workToDeferred = {};
+
+    var deferred = this.workToDeferred[hash];
+
+    if (!deferred){
+        deferred = Q.defer();
+
+        this.workToDeferred[hash] = deferred;
+        args.workHash = hash;
+        this.postMessage({  
+
+            method: method, 
+            args:   args
+
+        });
+
+    }
+    return deferred;
+  
+};
 
 iQ._workerSetup = function(){
 
@@ -176,14 +214,15 @@ iQ._workerSetup = function(){
             //Worker
                 worker              = iQ[workerName] = iQ[workerName] || new Worker(workerFile),
             //Function (Callback) //Only one of them at a time
-                workerCallback      = iQ[workerCallbackName] = iQ._promiseHandlerCallback.bind(worker);
+
+            //TODO: Add this to prototype;
+            //Requires attaching the messageHandler somewhere inside the constructor of this Worker constructor
+                workerCallback      = iQ[workerCallbackName] = iQ._deferredWorkResponseCallback.bind(worker);
 
 
             //Only used by _queryableWorkers... ? Actually would be used by any worker that returns results; flesh out difference
-            worker.queryToPromise =         {};
-            worker.queryHistory =           [];
-            worker.queryToPromiseResolves = {};
-            worker.queryToPromiseRejects =  {};
+            worker.workToDeferred =         {};
+            worker.workHistory =           [];
 
 
             worker.addEventListener('message', workerCallback,false);
@@ -209,77 +248,28 @@ iQ._workerSetup = function(){
         //Queryable Workers
         //========================
         iQ._queryableWorkers.forEach(function(type){
+                type = type.split('/').slice(-1)[0]; //For utility/set...nah shouldn't be in here
+
                 var workerName = iQ._workerName(type),
                     worker = iQ[workerName];
                 if (worker){
                     //Create the function
-                    iQ.prototype[type] = function(query){
+                    iQ.prototype[type] = function(query){    
+                        //TODO: if index changes, clear the cache
 
+                        //string to string returns itself, function to string returns the evallable function, regex to string returns arg that can be passed to RegEx()
+                        //An associative object to string returns [object Object]
+                        var args = { 
+                                    query:      query,
+                                    and_or:    iQ.and_or || 'and', //a string; even though there are only two possible values, don't want to express with a boolean
+                                    not:        iQ.not         //true or false
+                                }
+                        var method = 'getPostings';
 
+                        var deferred = worker.deferredWork(method, args, query);
 
-
-                        //Works like a cache
-                            //Only create a Promise if one hasn't already been created for this query
-                        //TODO:Any time the index would change... clear the cache. Would change:
-                            //Scope increases; referencing an extension of this iXBRL doc or a different one altogether;
-                            //Or values are changed, or new values are created
-                        //NOTE: queries can be many things; strings, objects, functions, regex's
-                            //  JSON.stringify('cash')                                  === '"cash"'
-                            //  JSON.stringify(/cash/g)                                 === '{}'
-                            //  JSON.stringify(function(o){return o.name==='cash'})     === undefined
-                            //  JSON.stringify({before:'20121231', after:'20120101'})   === '{"before":"20121231","after":"20120101"}'
-
-                            //  'cash'.toString()                                       === 'cash'
-                            //  /cash/g.toSring()                                       === '/cash/g'
-                            //  function (o){return o.name==='cash'}.toString()         === 'function (o){return o.name==='cash'}'
-                            //  ({before:'20121231', after:'20120101'}).toString()      === '[object Object]'
-
-                        var indexableQuery = query.toString()==='[object Object]' ? JSON.stringify(query) : query.toString();
-                        var queryIndex = worker.queryHistory.indexOf(indexableQuery) >-1 ? 
-                                            worker.queryHistory.indexOf(indexableQuery) 
-                                            : worker.queryHistory.push(indexableQuery)-1; //push returns the length, not the index 
-                        var queryHash = queryIndex; //JSON.stringify(query), //To hash it. NOTE:  http://stackoverflow.com/q/194846
-                            
-                            //Question, can it be identified coming out again? 
-                        var promise =   worker.queryToPromise[queryHash];
-
-                        if (!promise){
-                            worker.queryToPromise[queryHash]=  promise = new Promise(function(resolve, reject){ //aka fulfill, reject
-
-                                            worker.queryToPromiseResolves[queryHash] =resolve;
-                                                /*
-                                                function(postings){ 
-                                                    resolve(postings); };   //New line to set a breakpoint
-                                                    */
-                                            worker.queryToPromiseRejects[queryHash] =reject;
-                                                /*
-                                                function(postings){ 
-                                                    reject(postings); };   //New line to set a breakpoint
-                                                    */
-                                                //TODO: Each result must know whether it should be anded, ored
-                                                //But does the worker need to know this? No... Just the worker-listener;
-                                                    //Instead of assigning a Promise directly, could assign a Promise within a Promise which knew about and/or;
-                                                    //A thenable within a Promise
-                                                    //Or just some object 
-
-                                            worker.postMessage({  
-
-                                                method: 'getPostings', 
-                                                args:   { 
-                                                    queryIndex: queryIndex,
-                                                    query:      query,
-                                                    and_or:    iQ.and_or || 'and', //a string; even though there are only two possible values, don't want to express with a boolean
-                                                    not:        iQ.not         //true or false
-                                                }
-                                                //The worker script must return in its results the query that was provided
-                                                //The worker object here in the main script will route it to the correct  Promise; and resolve the Promise with the results
-                                            });
-
-                                            
-                                        });
-                        }
-                        //So get() can evaluate them
-                        this.queryPromises.push(promise);
+                        //Each iQ object has a separate list
+                        this.queryDeferreds.push(deferred);
                         //For chainability; will intellisense work?
                         return this;
                     }
@@ -289,18 +279,31 @@ iQ._workerSetup = function(){
 
 
 
-}
-//TODO: Expand these functions to accept separate iQ queries;
-//i.e. they'll act as parentheses, forcing an order of operations
-//Wouldn't it just push onto the iQ.queryPromises?
-iQ.and = function(){
-    iQ.and_or = 'and';
-    return iQ;
+};
+
+iQ._stringHash= function(obj){
+if(typeof obj === 'string') return obj;
+else if (obj.toString()==='[object Object]') return JSON.stringify(obj);    
+return obj.toString();
+};
+//TODO: Join this and next... Somehow use the Promise.all method above.
+iQ.prototype.and = function(next){
+    this.and_or = 'and';
+    return this;
 }
 
-iQ.or = function(){
-    iQ.and_or = 'or';
-    return iQ;
+//TODO: Join this and next... Somehow use the Promise.all method above.
+iQ.prototype.and = function(next){
+    this.and_or = 'or';
+    return this;
+}
+
+iQ.and = function(a,b){
+    return a.and(b);
+}
+
+iQ.or = function(a,b){
+    return a.or(b);
 }
 
 iQ.prefixIt = function(it, prefix, escOrJoiner) {
@@ -332,11 +335,7 @@ iQ.prefixPlusThem = function(prefix, escapedOrJoiner){
     };
 };
 
-iQ.flatten = function(twoDimArray){
-    //http://stackoverflow.com/questions/10865025/merge-flatten-an-array-of-arrays-in-javascript
-    var flattened = [];
-    return flattened.concat.apply(flattened, twoDimArray);
-};
+
 
 iQ._index = function () {
 
@@ -671,3 +670,5 @@ iQ._average = function()
 iQ._processHeader();
 iQ._index();
 iQ._workerSetup();
+
+});

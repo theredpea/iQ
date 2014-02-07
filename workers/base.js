@@ -9,6 +9,9 @@ Base = {
 
                     if (method in this || method in this.prototype)
                     {
+                        //apply will unpack an array
+                        //Call will send them directly
+                        //Using call because args will be used as a kwarg
                         (this[method] || this.prototype[method]).call(this,event.data.args);
                         //this[method](event.data.args);
                     }
@@ -113,10 +116,9 @@ Base = {
 	getPostings : function(args){
 			var query = args.query,// || args[0],
                 not = args.not,//|| args[1], //not defaults to false
-                and_or = args.and_or || 'and',// || args[] 
-                //TODO: Just return all the args
-                //TODO: actually init iQ.and_or somewhere in iQ so the default of 'and' is clear and configurable there, rather than hidden in here
-				filterFunc = function(object){ return true; },  //Default
+                and_or = args.and_or;
+
+                filterFunc = function(object){ return true; },  //Default
                 //TODO: Document
 				identityFunc = this.aspectMapper || aspectMapper, //function(object){ return object; },
                 //TODO: Document
@@ -149,7 +151,7 @@ Base = {
     								.map(resultsFunc);
 				//throw(new String(self.and));
                 //TODO: How does or work? Shouldn't main script handle "and/or"ing
-                args.results = self.or.apply(this,results);
+                args.results = results;//self.or.apply(this,results);
 
 				self.postMessage(args);
 	},

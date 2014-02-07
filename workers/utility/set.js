@@ -26,15 +26,25 @@ function sortArgsLengthAscending(argumentsFromAnotherFunction){
 
  function lengthAscending(i,j){return i.length-j.length;};
 
+function flatten(twoDimArray){
+    //http://stackoverflow.com/questions/10865025/merge-flatten-an-array-of-arrays-in-javascript
+    var flattened = [];
+    return flattened.concat.apply(flattened, twoDimArray);
+};
+
+function flattenArgs(args){
+	if (args.flatten){
+ 		args[0] = this.flatten(args[0]);
+ 		args[1] = this.flatten(args[1]);
+ 	}
+ 	return [args[0], args[1]];
+
+}
  function and(args){
- 	/*
- 	var args=Array.prototype.slice.call(arguments, 0);
- 	args.sort(lengthAscending);//sortArgsLengthAscending(arguments);
-	*/
- 	//throw(args.length);
- 	//throw(args);
- 	//Optimization
- 	self.postMessage(intersection.apply(this, args));
+
+ 	var results = intersection.apply(this, this.flattenArgs(args));
+ 	args.results = results;
+ 	self.postMessage(args);
 
  }
 
@@ -44,7 +54,10 @@ function sortArgsLengthAscending(argumentsFromAnotherFunction){
  	//Base.js uses call(); therefore arguments will come in directly
 
  	//args.sort(function(i,j){return j.length-i.length;});
- 	self.postMessage(union.apply(this, args));
+ 	var results=union.apply(this, this.flattenArgs(args));
+ 	args.results = results;
+
+ 	self.postMessage(args);
 
  }
 
