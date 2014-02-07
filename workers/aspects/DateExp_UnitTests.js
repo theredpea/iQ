@@ -1,4 +1,5 @@
 //From http://www.pelagodesign.com/blog/2009/05/20/iso-8601-date-validation-that-doesnt-suck/
+requirejs(['iQ2', 'DateExp'], function(iQ){
 
 var shouldWork = ['2009-12T12:34',
 '2009',
@@ -174,3 +175,4 @@ shouldNotWork.forEach(function(e,i,a){
 		//undefined, 						[24] 
 		//index: 0, 						[25] 
 		//input: "2010-02-18T16:23:48,444"] 							[1]
+})

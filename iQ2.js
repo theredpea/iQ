@@ -1,7 +1,6 @@
-requirejs(['../scripts/q'],
+requirejs(['scripts/q'],
     function(Q){
 
-window.Q = Q;
 
 iQ = function(options){
     if (!(this instanceof iQ))   //http://ejohn.org/blog/simple-class-instantiation/
@@ -17,7 +16,7 @@ iQ = function(options){
     //Then get its results later
     this.queryDeferreds = [];
 
-};
+    };
 
 iQ.prototype.get = function(onFulfilled,onRejected, onProgress){
     var results =[];
@@ -670,5 +669,7 @@ iQ._average = function()
 iQ._processHeader();
 iQ._index();
 iQ._workerSetup();
+
+return iQ;
 
 });
