@@ -115,7 +115,6 @@ Tests.instanceTests = function(){
 			catch(e){}
 		tbody.innerHTML+='<tr class="'+ isoString +' '+ passFailString + '"><td class="'+shouldString+'">'+shouldString+
 									'</td><td>'+e+
-									'</td><td>'+matchLength+
 									'</td><td>'+partsList.join(',')+
 									'</td><td class="pass-fail">'+passFailString+ 
 									'</td><td>'+isoString+
