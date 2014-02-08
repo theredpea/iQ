@@ -1,4 +1,4 @@
-define('PointExp', ['RangeExp'], function(RangeExp){
+define('PointExp', ['RangeExp', 'IsoDate'], function(RangeExp, IsoDate){
 
 	PointExp = function(s, options){ 
 
@@ -106,7 +106,7 @@ define('PointExp', ['RangeExp'], function(RangeExp){
 				catch(e){
 					//Since I'm dealing with a copy...
 					hydratedObject[valueName]=-1;
-					console.log(e.message); 
+					//console.log(e.message); 
 					//'Could not parseFloat (or else it produced NaN, undefined, null...) for name:\n\t' + 
 					//				part.name + '\nvalue:\n\t' + tryParse);
 				}

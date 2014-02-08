@@ -1,4 +1,6 @@
-DateExp = function(s, options){
+define('DateExp', [], function(){
+
+	DateExp = function(s, options){
 		this.s = s;
 		this.optionString = options;
 
@@ -56,3 +58,6 @@ DateExp = function(s, options){
 
 		return true || false;
 	}
+
+	return DateExp;
+});

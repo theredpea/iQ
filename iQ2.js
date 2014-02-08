@@ -1,5 +1,5 @@
-requirejs(['scripts/q'],
-    function(Q){
+
+define('iQ', ['Q'], function(Q){
 
 
 iQ = function(options){

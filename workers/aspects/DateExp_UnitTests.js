@@ -1,7 +1,16 @@
 //From http://www.pelagodesign.com/blog/2009/05/20/iso-8601-date-validation-that-doesnt-suck/
-requirejs(['iQ2', 'DateExp'], function(iQ){
+requirejs.config({
+  paths: {
+    'iQ': '../../iQ2',
+    'Q': '../../scripts/q'
+  }
+});
 
-var shouldWork = ['2009-12T12:34',
+requirejs(['iQ', 'DateExp',  'DateExps', 'PointExp'], function(iQ, DateExp, DateExps, PointExp){
+
+Tests = {};
+
+Tests.shouldWork = ['2009-12T12:34',
 '2009',
 '2009-05-19',
 '2009-05-19',
@@ -43,7 +52,7 @@ var shouldWork = ['2009-12T12:34',
 '2009-05-19 143922.500',
 '2009-05-19 1439,55']
 
-var shouldNotWork = ['200905',
+Tests.shouldNotWork = ['200905',
 '2009367',
 '2009-',
 '2007-04-05T24:50',
@@ -66,80 +75,75 @@ var shouldNotWork = ['200905',
 '2010-02-18T16:23.35:48.45',
 '2009-05-19 14.5.44',
 '2010-02-18T16:23.33.600',
-'2010-02-18T16,25:23:48,444']
-/*
-
-table=iQ.el('table');
-thead=iq.el('thead');
-theadrow = iQ.el('tr')
-theadrow.appendChild(iQ.el('th'))
-tbody = iQ.el('tbody');
-*/
+'2010-02-18T16,25:23:48,444'];
 
 //TODO Separate table for Durations?
-var tbody=iQ.first('#tbody');
-tbody.innerHTML='';
+Tests.instanceTests = function(){
+	tbody = iQ.firstNode('tbody');
+	Tests.shouldWork.concat(Tests.shouldNotWork).forEach(function(e,i,a){
+		var should=false,
+			fail=false;
 
-shouldWork.concat(shouldNotWork).forEach(function(e,i,a){
-	var should=false,
-		fail=false;
+		if (i<Tests.shouldWork.length) should=true;
 
-	if (i<shouldWork.length) should=true;
+		if (should) { 
+			if (!DateExps.ISO_8601_POINT.test(e)) {
+				console.log('false negative with ' + e); fail=true;}}
+		else { 
+			if (DateExps.ISO_8601_POINT.test(e)) {
+				console.log('false positive with ' + e); fail=true;} }
 
-	if (should) { 
-		if (!DateExps.ISO_8601_POINT.test(e)) {
-			console.log('false negative with ' + e); fail=true;}}
-	else { 
-		if (DateExps.ISO_8601_POINT.test(e)) {
-			console.log('false positive with ' + e); fail=true;} }
+		var match = e.match(DateExps.ISO_8601_POINT),
+			matchLength = match ? match.length : 0,
+			//matchString = match ? match.join(',') : '',
+			dateExp = new DateExp(e, 'f'),
+			isoString = 'false',
+			passFailString = fail ? 'fail': 'pass',
+			partsList =[],
+			specificity = '--',
+			specificityInt = 0,
+			shouldString = should ? 'Should': 'Not',
+			onValue = (dateExp.onValue || dateExp.fuzzyOnValue);
 
-	var match = e.match(DateExps.ISO_8601_POINT),
-		matchLength = match ? match.length : 0,
-		//matchString = match ? match.join(',') : '',
-		dateExp = new DateExp(e, 'f'),
-		isoString = 'false',
-		passFailString = fail ? 'fail': 'pass',
-		partsList =[],
-		specificity = '--',
-		specificityInt = 0,
-		shouldString = should ? 'Should': 'Not',
-		onValue = (dateExp.onValue || dateExp.fuzzyOnValue);
+		if (onValue){
+			partsList = 		dateExp.startValue.getPartsList(); //partsList; //onValue.partsList; 	//Using onValue
+			specificity = 		onValue.specificity,
+			specificityInt = 	onValue.specificityInt
+		}
 
-	if (onValue){
-		partsList = 		dateExp.startValue.getPartsList(); //partsList; //onValue.partsList; 	//Using onValue
-		specificity = 		onValue.specificity,
-		specificityInt = 	onValue.specificityInt
+		try{isoString=onValue.jsDate.toISOString(); } 
+			catch(e){}
+		tbody.innerHTML+='<tr class="'+ isoString +' '+ passFailString + '"><td class="'+shouldString+'">'+shouldString+
+									'</td><td>'+e+
+									'</td><td>'+matchLength+
+									'</td><td>'+partsList.join(',')+
+									'</td><td class="pass-fail">'+passFailString+ 
+									'</td><td>'+isoString+
+									'</td><td>'+specificityInt+
+									'</td><td>'+specificity+
+									'</td></tr>';
+
+	}); 
+}
+
+Tests.durationTests = function(){
+
+	duration = {
+
 	}
 
-	try{isoString=onValue.jsDate.toISOString(); } 
-		catch(e){}
-	tbody.innerHTML+='<tr class="'+ isoString +' '+ passFailString + '"><td class="'+shouldString+'">'+shouldString+
-								'</td><td>'+e+
-								'</td><td>'+matchLength+
-								'</td><td>'+partsList.join(',')+
-								'</td><td class="pass-fail">'+passFailString+ 
-								'</td><td>'+isoString+
-								'</td><td>'+specificityInt+
-								'</td><td>'+specificity+
-								'</td></tr>';
+	duration.shouldWork = ['P2013'];
+	duration.shouldNotWork = [];
+	duration.test = function(){
+		duration.Tests.shouldWork.forEach(function(e,i,a){
 
-}); 
-
-duration = {
+			var match = e.match(DateExps.ISO_8601_DURATION)
+		});
+	}
 
 }
-
-duration.shouldWork = ['P2013'];
-duration.shouldNotWork = [];
-duration.test = function(){
-	duration.shouldWork.forEach(function(e,i,a){
-
-		var match = e.match(DateExps.ISO_8601_DURATION)
-	});
-}
-
 /*
-shouldNotWork.forEach(function(e,i,a){
+Tests.shouldNotWork.forEach(function(e,i,a){
 
 	//console.log(e.match(DateExps.ISO_8601_POINT));
 	if (DateExps.ISO_8601_POINT.test(e)) console.log('false positive with ' + e);
@@ -175,4 +179,7 @@ shouldNotWork.forEach(function(e,i,a){
 		//undefined, 						[24] 
 		//index: 0, 						[25] 
 		//input: "2010-02-18T16:23:48,444"] 							[1]
+		Tests.instanceTests();
+		Tests.durationTests();
+	return Tests;
 })
