@@ -1,11 +1,62 @@
-// iQ as jQuery plugin...
 
-function ($) 
-{
-	$.fn.iQ = function() {
+//For consistency
+//iQ will use this terminology
+//In reference to ix:nonFraction where ix is (see map below)
 
-	}
+//ix..............................................................................prefix
+//nonFraction.....................................................................unqualifiedName or localName or unqualified name http://www.w3.org/TR/1999/REC-xml-names-19990114/#NT-NCName
+//ix:nonFraction..................................................................name or qualifiedName or qualified name  * Notice how 'name' refers to qualified name! And notice how qualified  http://www.w3.org/TR/xmlschema-2/#QName
+//http://www.xbrl.org/2008/inlineXBRL.............................................namespace
+//http://www.xbrl.org/2008/inlineXBRL:nonFraction.................................namespaceQualifiedName or namespace-qualified name....after mappping lexical prefix to value anyUri http://www.w3.org/TR/xmlschema-2/#anyURI
+//ix_nonFraction..................................................................underscoreName or underscore-qualified name
 
+//TODO: Reconcile with
+//NCName..........http://www.w3.org/TR/xmlschema-2/#NCName
+//QName...........http://www.w3.org/TR/xmlschema-2/#QName.........................aligned with qualified name
+
+
+/*
+Why: 
+	Validate iXBRL is valid
+	Ensure we could perform other processes, like iQ.process
+Links:
+	http://www.xbrl.org/Specification/inlineXBRL-part0/REC-2010-04-20/inlineXBRL-part0-REC-2010-04-20.html#d1e367
+
+*/
+iQ.validate = function(){};
+ // 
+
+/*
+Why: 
+	Produce XBRL Output
+Link:
+	http://www.xbrl.org/Specification/inlineXBRL-part0/REC-2010-04-20/inlineXBRL-part0-REC-2010-04-20.html#d1e367
+
+*/
+
+ iQ.process = function(){};
+
+
+/*
+
+
+
+//Corresponding to the rows in these tables
+//http://www.xbrl.org/WGN/XBRL-formula-overview/PWD-2011-12-21/example15va-implicit-filtering-1.png
+//Should also correspond with the filtering functions available on an iQ object
+iQ.aspects = [ 
+    {
+        aspect:'element',
+        synonyms:['concept', 'tag'],
+        aligned: function(a,b) { return iQ.equal(a,b,'name'); }
+    },
+    {
+        aspect:'axes',
+        synonyms:['concept'],
+        aligned: function(a,b) { return iQ.equal(a,b,'name'); }
+    },
+]
+*/
 
 }(jQuery);
 

@@ -1,766 +1,421 @@
-//This is all in console
-iQ = function(oOptions){
 
-    this.setOptions(oOptions);
-    this.getElements();
+define('iQ', ['Q'], function(Q){
+
+
+iQ = function(options){
+    //From Original iQ.js
+   /*this.o = $.extend(
+                    {
+                        url: 'http://www.xbrl.org/inlinexbrlextractortutorial/MassiveDynamic.html',
+                        inflate: true,
+                        loadDts: false,
+                        types: [], //Means to use iQ.el
+                        sortBy: 'dom',
+                        strict: false,
+                        target: 'body'
+                    },
+                    oOptions)
+        */
+    if (!(this instanceof iQ))   //http://ejohn.org/blog/simple-class-instantiation/
+        return new iQ(options);
     
-    this.makeConsole(); // was this.console.makeConsole();
-    this.makeFilterStats();
-	//this.initiXbrl();
-
-	//this.addResourceTable();
-    this.alliX();
-    this.bindEvents();
-
-	}
-
-
-iQ.prototype.showFilterStats = function(e)
-{
-
-e.preventDefault();
-e.stopPropagation();
-if($('thead>tr',this.filterStats).length==0)
-{
-
-    $('thead', this.filterStats).append($('<tr></tr>').append(
-
-        $.map(e.stats, function(value, property){
-            return $('<th></th>').text(property);
-
-            })
-
-        ))
-}
-
-$('#filterStats tbody').append($('<tr></tr>').append(
-
-        $.map(e.stats, function(value, property){
-            return $('<td></td>').text(value);
-
-            })
-
-        )
-    );
-
-}
-
-iQ.prototype.bindEvents = function()
-{
-
-
-
-    //TODO: Must load all synonyms here and point them at the proper functions!
-    
-    var eventArgs=  [
-        ['click', '[name]', $.proxy(this.click_tag, this)],
-        ['click', '.popover .close', $.proxy(this.click_popoverClose, this)]
-        
-    ];
-
-    //(Bad?) Way to prevent attaching multiple listeners.
-    eventArgs.forEach($.proxy(function(ev, index, eventArgs){
-        
-        /*this.body.off(ev[0]);
-        if (ev.length==2){
-            this.body.on(ev[0], ev[1]);
-        }
-        else if (ev.length==3)
-        {
-            */
-            this.body.on(ev[0], ev[1], ev[2]);
-        /*}*/
-
-    }, this));
-
-
-    //this.body.on('click', '[name]', $.proxy(this.click_tag, this));
-    //this.body.on('iQ_filterStats',  $.proxy(this.showFilterStats, this));
-    //this.body.on('click', '.popover .close', $.proxy(this.click_popoverClose, this));
-
-    this.body[0].addEventListener('drop', function(e){alert('dropped');});
-
-    ['dragstart', 'dragend'].forEach($.proxy(function(e, index, array){
-
-        //TODO: These events will fire any time anything is dragged, not just stickers, because I removed jQuery's context. However, only stickers are draggable=true
-
-        this.body[0].addEventListener(e, $.proxy(this[e+'_sticker'], this));
-
-    }, this));
-
-
-    ['dragenter', 'dragleave', 'dragover', 'drop', 'mouseleave'].forEach($.proxy(function(e, index, array){
-
-        this.iQconsole[0].addEventListener(e, $.proxy(this[e+'_iQconsole'], this));
-    }, this));
-
-    this.iQconsole.on('mouseleave', $.proxy(this.mouseleave_iQconsole, this));
-
-}
-
-
-
-
-iQ.prototype._measureIt = function(func, callIt, howOften, timeResults)
-{
-    timeResults = timeResults || [];
-    howOften = howOften || 1;
-    for(i=0;i<howOften; i++)
-    {
-        var startDate = new Date();
-        func();
-        var endDate = new Date();
-        var timing = (endDate-startDate);
-
-        timeResults.push(timing);
-        console.log( callIt + ' took ' + timing + ' ms;');
-    }
-    console.log(callIt+  ' averaged ' + this._averageIt(timeResults));
-
-};
-
-iQ.prototype._inflate = function(oResult, jResult, options)
-{
-
-    options = $.extend({bPopover:false}, options);
-    if (jResult===undefined)
-    { return undefined;
-    }
-
-    inflateFunc = function(propName, propValue){
-        //TODO: A solution for handling data-axis-us-gaap_StatementEquityComponents, which would become very funny-looking
-        //TODO: A solution for lowercasing? See inflateResults
-        propName = propName.replace(/([a-z])([A-Z])/g, function(match, first, second) { return first + '-' + second.toLowerCase(); });//$1-$2');
-
-        if (propValue || (typeof(propValue) == typeof({}) &&  Object.keys(propValue).length==0))
-        {
-            jResult.data(propName, propValue);
-            jResult.attr('data-'+propName, propValue);
-        }
-        if (options.bPopover)
-        {
-            
-            jResult.popover(
-                {
-                    html:true,
-                    content:this.tagPopoverHtml(jResult),
-                    title:'Tag Info <span class="close">x</span>',
-                    placement:'top'
-                }
-            );
-            
-        }
+    this.options = {
+        and_or: 'and'        
     };
 
-    //Put each 
-    $.each(oResult, $.proxy(inflateFunc, this));
-    //And cram the whole object there for reference? Excessive
-    //jResult.data('result', oResult);
-}
+    for (option in options) this.options[option] = options[option]; //Extend
 
+    //Push onto this list when running a query like name('cash')
+    //Then get its results later
+    this.queryDeferreds = [];
 
-iQ.prototype._inflateResults = function (index, result)
-{
-    var jResult = $(result),
-    sContextId = jResult.attr('contextref') || 'none',
-    sUnitId = jResult.attr('unitref') || 'none',
-    cRef = this.contextRef[sContextId],
-    uRef = this.unitRef[sUnitId]; 
-
-    if (uRef === undefined) {
-
-        if (jResult.attr('name') == undefined) {
-            console.log('no name');
-        }
-        uRef = '';
-        console.log("uRef for " + jResult.attr('name') + " is undefined. name is " );
-    }
-
-    if (cRef === undefined) {
-        cSegment = '';
-        cEntity = '';
-        cPeriod = { 'startDate': '', 'endDate': '', 'instant': '' };
-    }
-
-    else {
-
-        cSegment = cRef.segment;
-        cEntity = cRef.entity
-
-        cPeriod = cRef.period;
-    }
- 
-    if ($.isEmptyObject(cSegment)) {
-        cSegment = '';
-    }
-    //Consider aligning more closely with the properties described here (or on whichever ix: element allows the most )
-    //http://www.xbrl.org/Specification/inlineXBRL-part1/PWD-2013-02-13/inlineXBRL-part1-PWD-2013-02-13.html#sec-nonFractions
-    var name =jResult.attr('name'),
-        oResult = {            //this.getxObj(
-            'name'              : name.toLowerCase(),           //For case-insensitive matches; the default (we always lowercase the searchstring passed by user)
-            'conceptName'       : name,
-            'localName'         : name.split(':')[1],
-            'prefix'            : name.split(':')[0],
-        //   'periodType'        : Tax.periodType(name),        //Should be a constraining facet; but can asset indirectly? Ensuring startDate, endDate and instant are all equal?
-        //   'balanceType'        : Tax.balanceType(name),
-            'contextRef'        : sContextId,
-            'startDate'         : cPeriod.startDate,
-            'endDate'           : cPeriod.endDate,
-            'instant'           : cPeriod.instant,
-            'dimensions'        : cSegment,
-            'entity'            : cEntity.identifier,
-            'unitRef'           : sUnitId,
-            'measure'           : uRef.measure,
-            'numerator'         : uRef.numerator,
-            'denominator'       : uRef.denominator,
-            'ixType'            : jResult[0].nodeName
-        },
-        oDimensions={};
-
-    $.each(cSegment, function(axis, member) { oDimensions['axis-'+axis.replace(':','_')] = member; });
-    
-
-    oResult = $.extend(oResult, oDimensions);
-
-
-
-    //Data attributes for each axis
-
-
-    if (this.o.inflate)
-    {
-        this._inflate(oResult, jResult);
-
-    }
-        this.oResultSet.push(oResult);
-
-        //------------------CONTEXTREF
-        if(!$.isEmptyObject(this.contextRef) && this.contextRef[sContextId]!==undefined)
-        {
-
-            if(this.contextRef[sContextId].results===undefined)
-            {
-
-             this.contextRef[sContextId].results=[];
-            }
-
-            this.contextRef[sContextId].results.push(oResult);
-            this.contextRef[sContextId].count++;
-
-        }
-        //------------------NAMEREF
-        if(!$.isEmptyObject(this.nameRef) && this.nameRef[oResult.name]!==undefined)
-        {
-
-            if (this.nameRef[oResult.name] === undefined) {
-                this.nameRef[oResult.name] = {};
-                this.nameRef[oResult.name].results = [];
-                this.nameRef[oResult.name].count = 0;
-            }
-            this.nameRef[oResult.name].results.push(oResult);
-            this.nameRef[oResult.name].count++;
-
-        }
-
-        //------------------UNITREF
-        if(!$.isEmptyObject(this.unitRef) && this.unitRef[sUnitId]!==undefined)
-        {
-
-
-            this.unitRef[sUnitId].results.push(oResult);
-            this.unitRef[sUnitId].count++;
-        
-        }
-
-    //TODO: A count of segments
-
-    
-
-
-}
-
-
-
-iQ.prototype._stringFilter = function (oString) {
-
-var filter = {};
-if(typeof oString == 'string')
-{
-    filter =
-        {
-            contains: oString,
-            caseSensitive: false
-
-        };
-}
-else if (typeof oString == 'object')
-{
-	filter = $.extend({
-			caseSensitive: false
-			},
-			oString);
-
-}
-
-    return filter;
-}
-iQ.prototype.click_popoverClose = function (e) {
-    e.stopPropagation();
-    e.preventDefault();
-    jClose= $(e.target);
-    jPopover = jClose.closest('.popover');
-    jPopover.prev().trigger('click');
-}
-
-
-
-iQ.prototype.dragstart_sticker= function (e) {
-    jSticker = $(e.target);
-    jSticker.addClass('being-dragged');
-    this.iQconsole.addClass('suggestive');
-    e.dataTransfer.setData('iQ', jSticker.attr('data-iq'))
-    //e.originalEvent.dataTransfer.effectAllowed='all';
-    e.dataTransfer.effectAllowed='all';
-}
-
-
-iQ.prototype.dragend_sticker= function (e) {
-    jSticker = $(e.target);
-    this.iQconsole.removeClass('suggestive');
-    jSticker.removeClass('being-dragged');
-}
-
-iQ.prototype.dragover_iQconsole = function(e)
-{
-    if (e.preventDefault) e.preventDefault();
-    e.dataTransfer.dropEffect='copy';
-    console.log('draggingOver');
-    //e.dataTransfer.dropEffect='copy';
-    return false;
-}
-
-iQ.prototype.dragenter_iQconsole= function (e) {
-    jConsole = $(e.target);
-    jConsole.addClass('drag-over');
-    e.dataTransfer.dropEffect='copy';
-}
-
-
-iQ.prototype.dragleave_iQconsole= function (e) {
-    jConsole = $(e.target);
-    jConsole.removeClass('drag-over');
-}
-
-iQ.prototype.mouseleave_iQconsole= function (e) {
-    jConsole = $(e.target);
-    jConsole.removeClass('drag-over');
-}
-
-
-
-
-iQ.prototype.drop_iQconsole= function (e) {
-    if (e.stopPropagation) e.stopPropagation(); // stops the browser from redirecting...why???
-    iQdata = e.dataTransfer.getData('iQ');
-
-    e.dataTransfer.dropEffect='copy';
-    jConsole = $(e.target);
-    jConsole.append($('<div></div>').addClass("iq-clause").text(iQdata));
-}
-
-
-
-iQ.prototype.click_tag = function(e)
-{
-
-    jTag = $(e.target);
-    if(!jTag.data('popover'))
-    {
-    jTag.popover(
-                {
-                    html:true,
-                    content:this.tagPopoverHtml(jTag),
-                    title:'Tag Info <span class="close">x</span>',
-                    placement:'top'
-                }
-            );
-
-    jTag.popover('show');
-    }
-
-    
-
-    jTag.toggleClass('clicked');
-    
-
-
-}
-
-
-iQ.prototype.tagPopoverHtml = function(jTag)
-{
-
-    rowContentFunctions = {
-                            'Value' :'valueInfoHtml',
-                            'Concept': 'conceptInfoHtml',
-                            'Category': 'categoryInfoHtml',
-                            'Unit': 'unitInfoHtml',
-                            'Date': 'dateInfoHtml'
-
-                        };
-
-    var generateRowContent = function(contentType, index, array)
-    {
-
-        return $('<tr></tr>').append(
-                        $('<th></th>').text(contentType),
-                        $('<td></td>').append(this[rowContentFunctions[contentType]](jTag))
-                    );
     };
 
-    return $('<div></div>').append(
-                $('<table></table>').append(
-                    $('<tbody></tbody>').append(
-                            Object.keys(rowContentFunctions).map($.proxy(generateRowContent, this))
-                    )
-                )
-            ).html();
+iQ.prototype.get = function(onFulfilled,onRejected, onProgress){
+    var results =[];
+    if (this.queryDeferreds && this.queryDeferreds.reduce){
+
+        //https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/Reduce
+        results = this.queryDeferreds
+                .map(function(el, index){ return el.promise; })
+                .reduce(function(previousPromise, currentPromise, index, queryPromises){
+
+            //Once both are finished
+            //TODO: Could use a progress method on this consolidated promise;
+            return Q.all([previousPromise, currentPromise])
+                    .spread(function(prev, curr){
+
+                        return iQ.setWorker.deferredWork(curr.and_or,
+                            {0:prev.results, 1:curr.results, flatten:true},
+                            (prev.results.toString() + curr.results.toString())
+                            ).promise;
+
+
+                        
+                    });
+                })  //No need for [initialValue]
 }
 
-/*
-
-    oResult = {            //this.getxObj(
-        'name': jResult.attr('name'),
-        'contextRef': sContextId,
-        'startDate'     : cPeriod.startDate,
-        'endDate'       : cPeriod.endDate,
-        'instant'       : cPeriod.instant,
-        'dimensions': cSegment,
-        'entity': cEntity.identifier,
-        'unitRef': sUnitId,
-        'measure': uRef.measure,
-        'numerator': uRef.numerator,
-        'denominator': uRef.denominator,
-        'ixType'        : jResult[0].nodeName
-    };
-
-    */
-
-iQ.prototype.createSticker = function(title, content)
-{
-
-    return $('<div></div>')
-                //.data('iq-clause', title) // This won't work, maybe because it wasn't injected into the DOM, yet?
-                .attr('data-iq', title)
-                .addClass('sticker')
-                .attr('draggable', 'true').append(
-                                $('<span></span>').addClass('expander').text('+'),
-                                $('<span></span>').addClass('title').text(title)
-                            );
-
-
-}
-
-iQ.prototype.conceptFilterText = function(concept)
-{
-
-
-}
-
-
-//
-//======================MATH===============================
-//
-
-
-
-//An alignment function corresponds to each of these
-//The alignment tests for equality
-iQ.equal = function(a,b, property) { return a.data(property) == b.data(property); };
-
-
-//Corresponding to the rows in these tables
-//http://www.xbrl.org/WGN/XBRL-formula-overview/PWD-2011-12-21/example15va-implicit-filtering-1.png
-//Should also correspond with the filtering functions available on an iQ object
-iQ.aspects = [ 
-    {
-        aspect:'element',
-        synonyms:['concept', 'tag'],
-        aligned: function(a,b) { return iQ.equal(a,b,'name'); }
-    },
-    {
-        aspect:'axes',
-        synonyms:['concept'],
-        aligned: function(a,b) { return iQ.equal(a,b,'name'); }
-    },
-]
-/*
-'period',
-'durationLength',
-'duration',
-'startDate',
-'endDate',
-'member',
-'members',
-
-''
-*/
-
-
-// Returns true if the two iXBRL values are "aligned"
-// "Alignment" is like implicit filtering:
-// http://www.xbrl.org/WGN/XBRL-formula-overview/PWD-2011-12-21/XBRL-formula-overview-WGN-PWD-2011-12-21.html#section-implicit-filtering
-// iQ uses the idea of 'covered' and 'uncovered'
-// @method alignment
-//
-// @param {iQ object}
-// @param {iQ object}
-// @return {bool} true if the two iXBRL values are "aligned". Uses the first parameter's uncovered aspects
-// @static
-iQ.alignment = function(a, b)
-{
-
+    return results.done(onFulfilled,onRejected, onProgress);
 };
 
-// Produces a x b
-// @method _cartesianProduct
-//
-// @param {iQ object} first object, typically the "left operand" in an operation
-// @param {iQ object} second object, typically the "right operand"
-// @return {multidimensional array} the first dimension represents all the first objects, the second dimension the second objects
-// @NOTE: At first it was just going to return a multidimensional array
-// But then I get concerned that it's already looping through these dimensions testing for alignment, so it should operate while it's at it?
-// @static
-iQ._cartesianProduct = function(a, b)
-{
-
-    a.get().each(function(firstIndex, firstDOMObject){
-        b.get().each(function(secondIndex, secondDOMObject){
+iQ.andOrPostings
 
 
-
-        });
-    }); //A for loop would also enumerate its builtin properties and methods -- no good
-
-
-};
-
-
-iQ._parseValue = function(a)
-{
-
-};
-
-
-
-iQ._produceValueFunc = function(valueFunc)
-{
-    return function(a,b,c)
-    {
-
-        var newValue = valueFunc(iQ._parseValue(a), iQ._parseValue(b));
-
-        return c
-                .text(newValue)
-                .data('value', newValue)
-                .attr('data-value', newValue);
-
-    };
-};
-
-
-//TODO: Don't just provide an operateFunc, which will produce something
-    //And it only gets to act on their values
-//Provide a produceFunc, which will act on the whole jQuery objects (or iQ objects?), to produce a new jQuery/iQ object
-//Provide a whereFunc, which will test for alignment -- in addition to the implicit filtering.
-//For example, to test that the duration begins one day after the startingBalance
-//And the end begins one day after the endingBalance
-
-iQ._operate = function(operateFunc)
-{
-    return iQ._cartesianProduct(a,b,iQ._produceValueFunc(operateFunc));
-};
-
-
-// Produces an iQ object which aligns and sums the params
-// @method sum
-//
-// @param {iQ object} iQ object which is left operand
-// @param {iQ object} iQ object which is right operand
-// @return {iQ object} iQ object which is summed
-// @static
-
-iQ._add = function(a, b)
-{
-    return iQ._operate(function(a,b){ return a+b; });
-};
-
-
-// Produces an iQ object which aligns the param to the 'this' iQ object
-// @method sum
-//
-// @param {iQ object} iQ object which becomes right operand
-// @return {iQ object} iQ object which is summed
-iQ.prototype.addTo = function(b)
-{
-    return iQ._add(this, b);
-};
-
-
-//
-//======================UI==================================
-//
-
-iQ.prototype.conceptInfoHtml = function(jTag)
-{
-    sTagName =jTag.attr('name') ||  'No name';
-    sAbbrevTagName = sTagName;
-    if (sAbbrevTagName.length>35)
-    {
-        sAbbrevTagName = sTagName.slice(0,35) + "...";
-    }  
-    return this.createSticker(sAbbrevTagName).attr('title', sTagName).attr('data-iq', sTagName);
-
-}
-
-//Not using iQ.prototype.value because that is an alias for values()
-
-iQ.prototype.valueInfoHtml = function(jTag)
-{
-
-    return this.createSticker(this.fact.scale(jTag));
-}
-
-iQ.prototype.categoryInfoHtml = function(jTag)
-{
-
-    return this.createSticker(jTag.attr('contextref') ||  'No context');
-
-}
-iQ.prototype.unitInfoHtml = function(jTag)
-{
-     return this.createSticker(jTag.attr('unitRef') || 'No unit');
-    
-}
-
-iQ.prototype.dateInfoHtml = function(jTag)
-{
-
-    
-     return this.createSticker(jTag.attr('contextRef') || 'No context');
-}
-
-
-iQ.prototype.initiXbrl = function()
-{
-/*
-	$.ajax({
-		type: 'GET'
-		url: this.o.url,
-
-	});
-*/
-
-$(this.o.target).load(this.o.url, function(){console.log('Loaded iXBRL');});
-}
-
-
-iQ.format = function() 
-{}();
-//http://www.xbrl.org/Specification/inlineXBRL-part0/REC-2010-04-20/inlineXBRL-part0-REC-2010-04-20.html#sec-transformation
-
-
-
-/*
-Why: 
-	Validate iXBRL is valid
-	Ensure we could perform other processes, like iQ.process
-Links:
-	http://www.xbrl.org/Specification/inlineXBRL-part0/REC-2010-04-20/inlineXBRL-part0-REC-2010-04-20.html#d1e367
-
-*/
-iQ.validate = function(){};
- // 
-
-/*
-Why: 
-	Produce XBRL Output
-Link:
-	http://www.xbrl.org/Specification/inlineXBRL-part0/REC-2010-04-20/inlineXBRL-part0-REC-2010-04-20.html#d1e367
-
-*/
-
- iQ.process = function(){};
-
-
-//For consistency
-//iQ will use this terminology
-//In reference to ix:nonFraction where ix is (see map below)
-
-//ix..............................................................................prefix
-//nonFraction.....................................................................unqualifiedName or localName or unqualified name http://www.w3.org/TR/1999/REC-xml-names-19990114/#NT-NCName
-//ix:nonFraction..................................................................name or qualifiedName or qualified name  * Notice how 'name' refers to qualified name! And notice how qualified  http://www.w3.org/TR/xmlschema-2/#QName
-//http://www.xbrl.org/2008/inlineXBRL.............................................namespace
-//http://www.xbrl.org/2008/inlineXBRL:nonFraction.................................namespaceQualifiedName or namespace-qualified name....after mappping lexical prefix to value anyUri http://www.w3.org/TR/xmlschema-2/#anyURI
-//ix_nonFraction..................................................................underscoreName or underscore-qualified name
-
-//TODO: Reconcile with
-//NCName..........http://www.w3.org/TR/xmlschema-2/#NCName
-//QName...........http://www.w3.org/TR/xmlschema-2/#QName.........................aligned with qualified name
-
-//http://www.xbrl.org/Specification/inlineXBRL-part1/REC-2010-04-20/inlineXBRL-part1-REC-2010-04-20.html#sec-prefixes
- iQ.nsMap =  {
-		'ix'          :		'http://www.xbrl.org/2008/inlineXBRL',
-		'ixt'         :	'http://www.xbrl.org/inlineXBRL/transformation/2010-04-20',
-		'link'        :	'http://www.xbrl.org/2003/linkbase',
-		'xbrli'       :	'http://www.xbrl.org/2003/instance',
-		'xl'          :		'http://www.xbrl.org/2003/XLink',
-		'xlink'       :	'http://www.w3.org/1999/xlink',
-		'xml'         :	'http://www.w3.org/XML/1998/namespace',
-		'xsi'         :	'http://www.w3.org/2001/XMLSchema-instance'
- };
-
-
-/*
-Why:
-	To quickly find all elements
-Link:
-	http://www.xbrl.org/Specification/inlineXBRL-part1/REC-2010-04-20/inlineXBRL-part1-REC-2010-04-20.html#table-inlinexbrlelements
-Note:
-	These are "Inline XBRL Elements". Any element not in this list is called a "Markup Element"
-*/
- iQ.el = ['nonFraction'
-,'nonNumeric'
-,'denominator'
-,'exclude'
-,'footnote'
-,'fraction'
-,'header'
-,'hidden'
-,'numerator'
-,'references'
-,'resources'
-, 'tuple'];
-
- iQ.nonValue = [
+///non-value Elements
+ iQ.nvElements = [
      'header',
      'exclude',
      'references',
      'resources',
      'hidden',
-     'footnote'
- ];
+     'footnote'];
 
- iQ.prototype.valueEl = function () {
-     var results = [];
-     for (i in iQ.el) {
-             if (iQ.nonValue.indexOf(iQ.el[i]) == -1) {
-                 results.push(iQ.el[i]);
-             }
-             
+
+ iQ.elements = [
+     'nonFraction',
+     'nonNumeric',
+     'denominator',
+     'exclude',
+     'footnote',
+     'fraction',
+     'header',
+     'hidden',
+     'numerator',
+     'references',
+     'resources', 
+     'tuple'];
+
+
+
+
+iQ._workerFileName = function(type){
+	return '/workers/' + type + '.js';
+};
+
+iQ._workerName = function(type){
+    type = type.split('/').slice(-1);
+	return type + 'Worker';
+};
+
+iQ._workerCallbackName = function(type){
+    return '_on' + type + 'Callback'; //WorkerCallback';
+};
+
+//Workers
+//Currently there are workers for individual aspects
+//See #workerHierarchy for a different ideas
+iQ._workers = [
+    'name', 
+    'unit', 
+    'date',
+
+    'utility/set'
+    ];
+
+//Each is made into an iQ function which directly maps to a worker
+iQ._queryableWorkers = 
+iQ._workers;
+
+[
+    'name',
+    'unit',
+    'date'
+];
+//Just like setWorker.js
+iQ.flatten= function(twoDimArray){
+    //http://stackoverflow.com/questions/10865025/merge-flatten-an-array-of-arrays-in-javascript
+    var flattened = [];
+    return flattened.concat.apply(flattened, twoDimArray);
+};
+/*
+iQ._f = function(f){
+    return function(){
+        return f.apply(f, arguments);
+    }
+};
+*/
+
+iQ._dom = function(e)
+{
+    if (e.results)
+    {
+        iQ.forEachNode(//iQ.flatten(event.results)
+                        e.results
+                        .map(function(i){ return document.getElementById(i) }),//Illegal InvocationiQ._f(documents.getElementById)),
+                        function(n){
+                            n.style.backgroundColor = 'green';
+                        }
+                    );
+    }
+
+};
+
+
+iQ._deferredWorkResponseCallback = function(e){
+    //this refers to the Worker; since we used .bind();
+    //The worker is attached to iQ global object, so it can be used by any instantiated iQ objects
+    //e.data.queryIndex could be 0!
+    if (e.data.workHash!==undefined){
+
+        var deferred = this.workToDeferred[e.data.workHash];
+
+        if (e.data.error && deferred.reject){
+            deferred.reject(e.data);
         }
-     return results;
- }();
+        else if (deferred.resolve) {
+            deferred.resolve(e.data);
+        }
+
+    }
+
+};
+
+/*
+PromiseWorker = function(){
+    Worker.apply(this, arguments);
+};
+PromiseWorker.prototype = Worker.prototype;
+*/
+
+//Should the args by an object?
+Worker.prototype.deferredWork = function(method, args, hashable){
+                        //Each worker has a list;
+
+    var hash = iQ._stringHash(hashable),
+        index,
+        hashIndex = (index = this.workHistory.indexOf(hash))>-1 ? index : this.workHistory.push(hash)-1, //push returns the length, not the index 
+        hash = hashIndex; //JSON.stringify(query), //To hash it. NOTE:  http://stackoverflow.com/q/194846
+                        
+
+    if (this.workToDeferred===undefined) this.workToDeferred = {};
+
+    var deferred = this.workToDeferred[hash];
+
+    if (!deferred){
+        deferred = Q.defer();
+
+        this.workToDeferred[hash] = deferred;
+        args.workHash = hash;
+        this.postMessage({  
+
+            method: method, 
+            args:   args
+
+        });
+
+    }
+    return deferred;
+  
+};
+
+iQ._workerSetup = function(){
+
+        iQ.queryPromises = [];
+        iQ.and_or = 'and';
+
+        //All Workers
+        //========================
+        iQ._workers.forEach(function(type){
+            //Strings
+            var workerName          = iQ._workerName(type),
+                workerFile          = iQ._workerFileName(type),
+                workerCallbackName  = iQ._workerCallbackName(workerName), //iQ._workerCallbackName(type),
+
+            //TODO: Consider nesting these inside a worker object; and a callback object respectively so we don't pollute iQ namespace
+            //Worker
+                worker              = iQ[workerName] = iQ[workerName] || new Worker(workerFile),
+            //Function (Callback) //Only one of them at a time
+
+            //TODO: Add this to prototype;
+            //Requires attaching the messageHandler somewhere inside the constructor of this Worker constructor
+                workerCallback      = iQ[workerCallbackName] = iQ._deferredWorkResponseCallback.bind(worker);
+
+
+            //Only used by _queryableWorkers... ? Actually would be used by any worker that returns results; flesh out difference
+            worker.workToDeferred =         {};
+            worker.workHistory =           [];
+
+
+            worker.addEventListener('message', workerCallback,false);
+
+            var args = {
+                    originalIndex: iQ.index
+                },
+                aspectIndex;
+            //If aspectIndices are delegated to workers...
+            if (iQ.aspectIndices && (aspectIndex = iQ.aspectIndices[type])){
+            	args.aspectIndex = aspectIndex; 
+            }
+
+            //TODO: Separate set which does not have this method;
+            //Do this only with the queryableWorkers
+            iQ[workerName].postMessage({
+            	method: 'makeInvertedIndex', 
+            	args: args,
+            	});
+
+        });
+
+        //Queryable Workers
+        //========================
+        iQ._queryableWorkers.forEach(function(type){
+                type = type.split('/').slice(-1)[0]; //For utility/set...nah shouldn't be in here
+
+                var workerName = iQ._workerName(type),
+                    worker = iQ[workerName];
+                if (worker){
+                    //Create the function
+                    iQ.prototype[type] = function(query){    
+                        //TODO: if index changes, clear the cache
+
+                        //string to string returns itself, function to string returns the evallable function, regex to string returns arg that can be passed to RegEx()
+                        //An associative object to string returns [object Object]
+                        var args = { 
+                                    query:      query,
+                                    and_or:    iQ.and_or || 'and', //a string; even though there are only two possible values, don't want to express with a boolean
+                                    not:        iQ.not         //true or false
+                                }
+                        var method = 'getPostings';
+
+                        var deferred = worker.deferredWork(method, args, query);
+
+                        //Each iQ object has a separate list
+                        this.queryDeferreds.push(deferred);
+                        //For chainability; will intellisense work?
+                        return this;
+                    }
+            }
+        });
+
+
+
+
+};
+
+iQ._stringHash= function(obj){
+if(typeof obj === 'string') return obj;
+else if (obj.toString()==='[object Object]') return JSON.stringify(obj);    
+return obj.toString();
+};
+//TODO: Join this and next... Somehow use the Promise.all method above.
+iQ.prototype.and = function(next){
+    this.and_or = 'and';
+    return this;
+}
+
+//TODO: Join this and next... Somehow use the Promise.all method above.
+iQ.prototype.and = function(next){
+    this.and_or = 'or';
+    return this;
+}
+
+iQ.and = function(a,b){
+    return a.and(b);
+}
+
+iQ.or = function(a,b){
+    return a.or(b);
+}
+
+iQ.prefixIt = function(it, prefix, escOrJoiner) {
+    var joiner = ':';
+    if (typeof(escOrJoiner)==='string') joiner= escOrJoiner;
+    else if (escOrJoiner || escOrJoiner===undefined) joiner = '\\:'; //Escape joiner for use in iQ.allNodes
+
+    return prefix+joiner+it;
+};
+
+iQ.prefixPlusIt = function(it, prefix, escOrJoiner){
+    return [it, iQ.prefixIt(it, prefix, escOrJoiner)];
+};
+
+
+
+///Functions that create and return inner-functions; inner-functions can be used in .map
+///Given first-level attributes prefix and escape
+///Returns function that appends element
+iQ.prefixThem = function(prefix, escapedOrJoiner){
+    return function(element, index, array) {
+        return iQ.prefixIt(element, prefix, escapedOrJoiner)
+    };
+};
+
+iQ.prefixPlusThem = function(prefix, escapedOrJoiner){
+    return function(element, index, array) {
+        return iQ.prefixPlusIt(element, prefix, escapedOrJoiner)
+    };
+};
+
+
+
+iQ._index = function () {
+
+        iQ.allNodesElements = iQ.flatten(    //Necessary because we use prefixPlus
+                            iQ.elements.map(                //TODO: Shim for native array map method
+                                iQ.prefixPlusThem('ix')
+                            )
+                        );
+                                    
+        var allElements     = iQ.allNodes(iQ.allNodesElements),
+            index           = {},
+            indexF          =   function(ixNode, i){
+                                    var iQid        = iQ.prefixIt(i, 'iQ', '_'),
+                                        ixType      = ixNode.nodeName,
+                                        //TODO: Accommodate all attributes, not just nonFraction's? 
+                                            //http://www.xbrl.org/Specification/inlineXBRL-part1/PWD-2013-02-13/inlineXBRL-part1-PWD-2013-02-13.html#sec-nonFractions
+                                        //TODO: Accommodate more complex content; cast them as their Javascript equivalent
+                                            //HTML text
+                                            //Numbers
+                                            //Booleans
+
+                                        valueResult = {
+                                            ixType          :ixType,            
+                                            value           :iQ._text(ixNode),
+                                            index           :i
+                                        };
+
+                                    iQ.attrs.forEach(function(attr){
+                                        var v;
+                                        if(v=iQ._attr(ixNode, attr)) valueResult[attr]=v;
+                                    });
+                                    //TODO: Special processing depending on ixType?
+
+
+                                    //Displace their ID
+                                    if(ixNode.id) ixNode.setAttribute('data-original-id', ixNode.id);
+                                    ixNode.id = iQid;
+                                    index[iQid] = valueResult;
+                                };
+            iQ.forEachNode(allElements, indexF);
+        
+            //Example index:
+            /*
+            iQ_0: {
+                    contextRef: "fy10d"
+                    index: 0
+                    ixType: "IX:NONNUMERIC"
+                    name: "dei:DocumentType"
+                    value: "10-K"
+                },
+            iQ_1: {
+                    contextRef: "fy10d"
+                    format: "ixt:datelongus"
+                    index: 1
+                    ixType: "IX:NONNUMERIC"
+                    name: "dei:DocumentPeriodEndDate"
+                    value: "December 31, 2010 "
+            }
+            */
+            //1) It is valid JSON
+            //2) It can be stringified without loss of fidelity (i.e. no DOM nodes)
+            //3) The keys can be used to quickly lookupv alues
+            //4) The keys can be used with an ID selector to find location in DOM
+
+            iQ.index = index;
+        //this.index.elements;
+
+ };
 
 /*
 Why:
@@ -770,8 +425,7 @@ Link:
 Note:
 	These are "Inline XBRL Attributes". They are not namespaced in the spec.
 */
-iQ.att =[
-
+iQ.attrs =[
 	'arcrole',
 	'contextRef',
 	'decimals',
@@ -791,61 +445,225 @@ iQ.att =[
 	'title',
 	'tupleID',
 	'tupleRef',
-	'unitRef'
-];
+	'unitRef'];
 
 
+iQ._processHeader = function()
+{
+  	
+    var header      = iQ.firstNode(iQ.prefixPlusIt('header', 'ix')),
+        contexts    = iQ.allNodes(header, iQ.prefixPlusIt('context', 'xbrli')),
+        units       = iQ.allNodes(header, iQ.prefixPlusIt('unit', 'xbrli'));
 
-  iQ.prototype.iX = function(){
-  	u = iQ.prototype.valueEl.slice(0);
-  	q=[];
-  	for (i in u)
-		{
-			q.push('ix\\:' + u[i]);
-		}
-  	return q;
-  }();
+        iQ.unitRef ={};
+        iQ.contextRef = {};
+        //unit is used by unitWorker
+            //unitWorker might delegate to numeratorWorker, denominatorWorker...
+        //context is used by contextWorker
+            //delegate to startWorker, endWorker, timeSpanWorker, memberWorker, axisWorker
+  		iQ.forEachNode(contexts, iQ._processContextNode);
+
+    	iQ.forEachNode(units, iQ._processUnitNode);   
+
+        //#workerHierarchy
+    	//Currently making a worker for the smallest queryable property; i.e. date, name, member; each of which has a worker. 
+            //This means a single broad aspectIndex; contextRef is sent to multiple workers
+        //Consider creating workers for the broader iQ concept; context; which delegates to date, or member: a tree of concepts forms a hierarchy of workers; 
+            //This means a single broad aspectIndex; contextRef is sent to the parent worker who can decompose it into smaller aspectIndices for subWorkers
+    	iQ.aspectIndices = {
+            unit    : iQ.unitRef, 
+            date    : iQ.contextRef, 
+            member  : iQ.contextRef };
+        //Example aspect index
+        /*fy07e: 
+        {
+            entity: {
+                identifier: "9876543210"
+                scheme: undefined
+            }
+            id: "fy07e"
+            index: 10
+            period: {
+                endDate: undefined
+                endDateDate: Invalid Date
+                instant: "2007-12-31"
+                instantDate: Sun Dec 30 2007 17:00:00 GMT-0700 (Mountain Standard Time)
+                startDate: undefined
+                startDateDate: Invalid Date
+            }
+            segment: {}
+        }
+        */
+        //1)Lookup for XBRL refs; a single ref represents many domains/many aspects
+        //2)Create common shortcut queries; fy07e is equivalent to "every value as of 2007-12-31"
+            //.id('9876543210').asOf('2007-12-31');
+            //No need to set.intersection the results of two separate workers (idWorker and dateWorker)
+            //If we can build logic that can infer 'fy07e' from the query .id('9876543210').asOf('2007-12-31');
+        //3)Valid JSON (even the Date objects); can (must) be passed to workers to create individual
+        
 
 
-  iQ.prototype.alliX = function()
-  {
+};
 
-  	//jPreQualElements.css('background-color', 'yellow');
+//TODO: More of these, and they can use the prefix the iXBRL doc defines
+//Also provide prefixItPlus alternatives
+iQ._xbrli = function(it){
+    return iQ.prefixIt(it, 'xbrli');
+};
 
-  }
+iQ._processContextNode = function (contextNode, index, nodeList)
+{
+
+        //1) date texts are ISO 8601 
+        //2) they are unions of date and dateTime
+        //3) there are rules for inferring time if only a date is provided
 
 
+        //In original iQ.js, I converted date texts to Date objects
+        //TODO: Should I do it? Use the right rules. See iQ.dateFromIso; see aspects/DateExp
+        //Need to accommodate not just dates, but times; and time zones!
 
-iQ.prototype.addResourceTable= function () {
+         
+        var identifierNode  = iQ.firstNode(contextNode, iQ.prefixIt('identifier', 'xbrli')),
+            periodNode      = iQ.firstNode(contextNode, iQ.prefixIt('period', 'xbrli')),
+            segmentNodes    = iQ.allNodes(contextNode, iQ.prefixIt('segment', 'xbrli')),
+            periodTextF     = function(text) { return iQ._text(iQ.firstNode(periodNode, iQ.prefixIt(text, 'xbrli'))) },
+            segmentMaker    = function(s) { return function(memberNode) { s[iQ._attr(memberNode, 'dimension')] = iQ._text(memberNode) }},
+            startDate       = periodTextF('startDate'),
+            endDate         = periodTextF('endDate'),
+            instant         = periodTextF('instant'),
+            forever         = new Boolean(iQ.firstNode(periodNode, iQ.prefixIt('forever', 'xbrli'))),
+            entityObject    = {
+                identifier  :iQ._text(identifierNode),
+                scheme      :iQ._attr(identifierNode)
+            },
+            segmentObject   = {},
+            throwAway       = iQ.forEachNode(segmentNodes, segmentMaker(segmentObject)),
+            periodObject    = {
+                startDate       :startDate,
+                startDateDate   :new Date(startDate),   //See above re: dateFromIso; I don't think IE Date constructors recognize ISO strings
+                endDate         :endDate,
+                endDateDate     :new Date(endDate),
+                instant         :instant,
+                instantDate     :new Date(instant),
+            },
 
-$('<table>')
-.append(
+            contextResult   = {
+                id              :contextNode.id,
+                entity          :entityObject,
+            //Keyed on ['startDate', 'endDate', 'instant']
+                //transferrence; should I un-nest this?
+                period          :periodObject,
+                segment         :segmentObject,
+                index           :index 
+            };
+        //return contextResult;
+        iQ.contextRef[contextResult.id]= contextResult;
 
-	$('<tr>')
-		.append(
-			$('<th>').text('ContextRef'),
-			$('<th>').text('Context Start'),
-			$('<th>').text('Context End'),
-			$('<th>').text('Context Instant')
-			)
-		,
-	$.map(	this.contextRef, 
-			function(value, key)
-			{ 
-				return $('<tr>').append(
-				$('<td>').text(key),
-				$('<td>').text(value.period.startDate),
-				$('<td>').text(value.period.endDate),
-				$('<td>').text(value.period.instant))
-			}
-		)
-	).appendTo($(this.o.target));
+};
+
+
+iQ._processUnitNode = function(unitNode, index, nodeList)
+{
+
+    //TODO: Support multiplication? Two measures?
+    var measureQ        = iQ.prefixIt('measure', 'xbrli'),
+        measureNodes    = iQ.allNodes(unitNode, measureQ),
+        measureNode     = measureNodes[0], //iQ.firstNode(unitNode, measureQ),
+        numeratorNode   = iQ.firstNode(unitNode, iQ.prefixIt('numerator', 'xbrli')),
+        denominatorNode = iQ.firstNode(unitNode, iQ.prefixIt('denominator', 'xbrli')),
+        unitResult = {
+            id              :unitNode.id,   //.getAttribute('id'), //attributes['id'],
+            measure         :iQ._text(measureNode),
+            numerator       :iQ._text(iQ.firstNode(numeratorNode, measureQ)),
+            denominator     :iQ._text(iQ.firstNode(denominatorNode, measureQ)),
+            multiplicands   :iQ.mapNode(measureNodes, iQ._text),  
+            index           :index,        
+            //http://math.stackexchange.com/a/229564
+            // http://www.xbrl.org/Specification/XBRL-RECOMMENDATION-2003-12-31+Corrected-Errata-2008-07-02.htm#_example_21
+            //results         :[],           
+            //count           :0
+        }
+
+        iQ.unitRef[unitResult.id] = unitResult;
 };
 
 
 
+//DOM utilities
+//===============================
+iQ._qsa = function(queryStringOrNode, queryString)
+{
+    return iQ._q(queryStringOrNode, queryString, 'querySelectorAll');
+};
+iQ.allNodes = iQ._qsa;
 
-iQ.prototype.average = function()
+iQ._ce = function(elementName){
+    return document.createElement(elementName);
+}
+iQ.el = iQ._ce;
+
+iQ._qs = function(queryStringOrNode, queryString)
+{
+    return iQ._q(queryStringOrNode, queryString, 'querySelector');
+};
+
+iQ.firstNode = iQ._qs;
+
+//Would prefer to use this for 
+iQ.nodesNamed = function(tagNameOrNode, tagName)
+{
+    return iQ._q(tagNameOrNode, tagName, 'getElementsByTagName');
+};
+
+iQ._q = function(queryStringOrNode, queryString, queryMethod)
+{
+
+    if (queryStringOrNode){
+
+        //query whole document; 
+        //Odd: String('this') instanceof String == false
+        if (typeof(queryStringOrNode)==='string' || queryStringOrNode instanceof Array){
+            return document[queryMethod](queryStringOrNode);
+        }
+        //first arg is a node; query its children
+        else{
+            return queryStringOrNode[queryMethod](queryString);
+        }
+    }
+
+};
+
+iQ._text = function(node)
+{
+    if (node) return node.textContent;
+}
+
+iQ._attr = function(node, attr)
+{
+    if (node && attr) return attr instanceof Array ?
+                        attr.map(function(att){node.getAttribute(att); })
+                        : node.getAttribute(attr);
+}
+
+///NodeList utilities
+///=========================================
+iQ.forEachNode = function(nodeList, eachFunction)
+{
+    if (nodeList) return [].forEach.call(nodeList, eachFunction);
+
+}
+
+iQ.mapNode = function(nodeList, eachFunction)
+{
+    if (nodeList) return [].map.call(nodeList, eachFunction);
+}
+
+
+
+//Math utilities
+//===================
+iQ._average = function()
 {
     var sum=0;
     var count =0;
@@ -856,48 +674,15 @@ iQ.prototype.average = function()
     return sum/count;
 }
 
-iQ.prototype.makeFilterStats = function(){
 
-    if (!this.filterStats)
-    {
-        this.filterStats = $('#filterStats');
-
-    }
-
-    if(this.filterStats.length==0)
-    {
-        this.filterStats = $('<div></div>').attr('id', 'filterStats').append($('<table></table>').prepend($('<thead></thead>'), $('<tbody></tbody>'))).appendTo('html');
-    }
-}
-
-iQ.prototype.makeConsole = function(){
-    /*
-    makeConsole: function()
-    {
-    */
-
-            if (!this.iQconsole)
-            {
-                this.iQconsole = $('#iQconsole');
-
-            }
-
-            if ($('#iQconsole').length==0)
-            {
-
-                this.body.on('iQ_filterStats',  $.proxy(this.showFilterStats, this));
-                this.iQconsole = $('<div></div>').attr('id', 'iQconsole').appendTo('html');
-            }
-
-    /*
-    }
-    */
-}
-
-  $(document).ready(function(){
+//UI utilities
+//========================
 
 
+iQ._processHeader();
+iQ._index();
+iQ._workerSetup();
 
+return iQ;
 
-      q = new iQ();
-  });
+});
