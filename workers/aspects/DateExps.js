@@ -23,7 +23,7 @@ define('DateExps', [], function(){
 					{name:'secondPart', 	matchIndex:19}];
 
 
-	//The smallest value used can have a fractional version 
+	//The smallest value used can have a fractional part 
 	DateExps.ISO_8601_DURATION		= new RegExp('(P(\d*\.\d*)*Y*(\d*\.\d*)*M*(\d*\.\d*)*D*)(T(\d*\.\d*)*H*(\d*\.\d*)*M*(\d*\.\d*)*S*)*');
 
 	DateExps.DURATION_PARTS  = [
@@ -37,42 +37,6 @@ define('DateExps', [], function(){
 					{name:'secondPart', 	matchIndex:8}];
 					
 
-	//DateExps.POINT;
-	//DateExps.RANGE 		= /((?:-=)|(?:=-)|(?:-)|(?:=))/; Overkill
-	//I'm going to co-opt my old INTERVAL symbol for the RANGE instead
-	DateExps.RANGE = '->';
-	//An Interval has a specified start and end date  
-
-	//I thought to do a custom syntax; but Wikipedia describes something satisfactory  http://en.wikipedia.org/wiki/ISO_8601#Time_intervals
-	//Which allows four ways to express a Duration, which is cool
-	//Don't want to use Solidus, aka forward slash, in case these are stored in filenames
-
-	//It doesn't have a notation to express whether the "bookends" should be included (inclusive) or not;
-	//But that's a corner case
-	//DateExps.INTERVAL 	= /([^(:->)]*)->([^(:->)]*)/;
-	//DateExps.SPAN 		= /->/;
-
-	//In summary:
-	// 	(()->())
-	//	(()->())--(()->())
-
-	//http://my.safaribooksonline.com/book/programming/regular-expressions/9780596802837/4dot-validation-and-formatting/id2983571
-
-
-	DateExps.RANGED = function(bookend, rangeSymbol){
-		if(!bookend) return;
-		rangeSymbol = rangeSymbol || DateExps.RANGE;			//Can override DateExpsRange default
-		bookend = bookend.source ? bookend.source : bookend; 	//Can use a regex, or a string
-
-		var optionalBookend = '('+ bookend + ')*',
-			rangeString =  optionalBookend + rangeSymbol + optionalBookend,
-			rangeRegex = new RegExp(rangeString);
-			
-		return rangeRegex;
-
-
-	};
-
 	DateExps.Clone = function (obj) {
 	    if (null == obj || "object" != typeof obj) return obj;
 	    var copy = obj.constructor();
@@ -82,41 +46,6 @@ define('DateExps', [], function(){
 	    return copy;
 	}
 
-
-	DateExps.MatchesExpOrExpRange = function(s, exp, rangeSymbol){
-
-		return s.match(DateExps.RANGED(exp, rangeSymbol)) || s.match(exp); 							//Should have a length of 1; on part is at [0]
-						//Should have a length of 3; start and end parts are at [1] and [2]
-	}
-
-
-
-
-
-	//https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function/apply#Using_apply_to_chain_constructors
-	/* Doesn't work with native constructors, like Date
-	Function.prototype.construct = function (aArgs) {
-	    var fConstructor = this, 
-	    	fNewConstr = function () { 
-	    		//The main question I had in wondering what to pass as the "this" arg... 
-	    		//TODO: What does the 'this' arg represent, since we're inside an anonymouse function?
-	    		//I believe the most important part is that it makes new fNewConstr() meaningful; filling out all its this. properties
-	    		fConstructor.apply(this, aArgs); 
-	    	};
-		//So that "inheritance" works; instanceof will work, 
-			//and also constructor will point to the fConstructor;
-		//Could I use this to mask Date in an IsoDate directly?
-			//without separating it as a property: IsoDate.Date 
-	    fNewConstr.prototype = fConstructor.prototype;
-	    return new fNewConstr();
-	};
-	*/
-
-	//Black arts of Javascript; this is an edge case
-	//https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function/bind#Bound_functions_used_as_constructors
-	//I just do this so I can effectively *args like Python allows me to; so:
-		//1) I can pass variable number of arguments, if (say) user was no more specific than "Months"
-		//2) I don't need to explicitly get all six index positions
 
 
 

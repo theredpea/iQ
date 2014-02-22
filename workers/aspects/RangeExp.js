@@ -1,8 +1,12 @@
 define('RangeExp',[], function(){
 
-	//'Range of' is something that can be abstracted...
-	//Changes the properties from 'onDate' to 'startDate' and 'endDate'
-	//And the test from 'equals' to 'greater than', and/or 'less than'
+	//Any object that is on a continuous scale;
+	//i.e. dollars, temperatures, dates;
+	//A user may want to query (express) a range of these values
+	//i.e. less than some amount and/or greater than another amount
+	//The syntax for this query should be the same;
+	//The expression can derive from RangeExpression
+
 
 	RangeExp = function(s, options){
 		//Allow assigning prototypes to a new RangeExp(), without passing an argument
@@ -23,18 +27,71 @@ define('RangeExp',[], function(){
 	};
 
 	RangeExp.prototype._parseOptions = function(){
+		//Expressions should be strings;
+		//Like RegEx's, they can be configured with "options" at the end,
+		//Like 'g' or 'i'
+	
 		if (this.optionString){
 			this.options.fuzzy = this.optionString.indexOf('f')>-1;
-			//this.options.fuzzy = this.optionString.indexOf('f')>-1;
 		}
 
 	};	
 
 
 	RangeExp.prototype._validateState = function(){
-
 		//Validate start is less than end; allow subclasses to define "less"
 	};
+
+
+	//DateExps.POINT;
+	//DateExps.RANGE 		= /((?:-=)|(?:=-)|(?:-)|(?:=))/; Overkill
+	//I'm going to co-opt my old INTERVAL symbol for the RANGE instead
+	RangeExp.RANGE = '->';
+	//An Interval has a specified start and end date  
+
+	//I thought to do a custom syntax; but Wikipedia describes something satisfactory  
+	//http://en.wikipedia.org/wiki/ISO_8601#Time_intervals
+		//1) Start/end
+		//2) Start/duration
+		//3) Duration/end
+		//4) Duration
+
+	//It doesn't have a notation to express whether the "bookends" should be included (inclusive) or not;
+	//But that's a corner case
+	//DateExps.INTERVAL 	= /([^(:->)]*)->([^(:->)]*)/;
+	//DateExps.SPAN 		= /->/;
+
+	//In summary:
+	// 	(()->()) Want a point between two points
+	//	(()->())--(()->()) Want a duration with ranges for starting and ending points
+
+	//http://my.safaribooksonline.com/book/programming/regular-expressions/9780596802837/4dot-validation-and-formatting/id2983571
+
+
+	RangeExp.RANGED = function(bookend, rangeSymbol){
+		//bookend is a RegEx or a string representing a RegEx; example: '\d*' (identifying a number)
+		//rangeSymbol defaults to '->', but can be override  
+
+		if(!bookend) return;
+		rangeSymbol 	= rangeSymbol 		|| DateExps.RANGE;	//Can override DateExpsRange default
+		bookend 		= bookend.source 	|| bookend; 			//Can use a regex, or a string
+
+		var optionalBookend = '('+ bookend + ')*',
+			rangeString =  optionalBookend + rangeSymbol + optionalBookend,
+			rangeRegex = new RegExp(rangeString);
+			
+		return rangeRegex;
+
+
+	};
+
+
+	RangeExp.MatchesExpOrExpRange = function(s, exp, rangeSymbol){
+
+		return  s.match(exp) || s.match(DateExps.RANGED(exp, rangeSymbol));
+				//exp is length 1; the part at  [0]
+				//ranged is length 3; [1] and [2]
+	}
 
 
 	RangeExp.prototype._setProperties = function(){
@@ -47,7 +104,7 @@ define('RangeExp',[], function(){
 
 			//User does not provide, isntead, Developer / Class provides:
 				//this.maxSpecificity; 	// Complements the idea of fuzzy
-		this.matches = DateExps.MatchesExpOrExpRange(this.s, /.*(?!->)/)//DateExps.MatchesExpOrExpRange(this.s, this.exp, this.rangeSymbol);
+		this.matches = RangeExp.MatchesExpOrExpRange(this.s, /.*(?!->)/)//DateExps.MatchesExpOrExpRange(this.s, this.exp, this.rangeSymbol);
 		
 		if(!this.matches){
 			//Validation; alert message?

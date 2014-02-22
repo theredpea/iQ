@@ -39,7 +39,8 @@ label{
 }
 
 </style>
-<img src="glass.png" id="glass"/>
+<!--TODO: Construct this with a canvas group-->
+<img src="sunrise.png" id="glass"/>
 <div class="container">
 <div class="cell">
     <canvas id="canvas"></canvas>
@@ -56,25 +57,28 @@ var canvas=document.getElementById('canvas'),
     speed = 30,
     i=0,
     antiClockwise = false,
-    showIt = true,
-    stillDontShowIt=false;
-canvas.width=400;
-canvas.height=400;
-//canvas.width=canvas.height;
-l=canvas.width/2;
-image = document.getElementById('glass');
-console.log(image.width);
+    image = document.getElementById('glass'),
+    l = 200; //half width , half height
+
+
+    canvas.width=l*2;
+    canvas.height=l*2;
 
 if (canvas.getContext){
-        var c = canvas.getContext('2d');
-        var g = c.createRadialGradient(l,l,(l*3/4)/2,l,l,l/2);
-        g.addColorStop(0,'rgba(0, 0, 0, 0.5)');//#444');
-        g.addColorStop(1,'rgba(0, 0, 0, 0.7)');//'#222');
-        c.fillStyle=g;
-        var cx=l;///2;
-        var cy=l;//l/2;
-        var a=Math.sqrt(Math.pow(cx,2)/2);//35.35;
-    //console.log(a);
+        var c = canvas.getContext('2d'),
+        //inner x,y,r outer x,y,r
+            innerRadius = (l*3/4)/2,
+            outerRadius =l/2,
+            g = c.createRadialGradient(l,l,innerRadius, l,l,outerRadius),
+            cx=l,///2;
+            cy=l,//l/2;
+            //a^2 + b^2 = c^2; 
+            a=Math.sqrt(Math.pow(cx,2)/2);//35.35;
+
+            g.addColorStop(0,'rgba(0, 0, 0, 0.5)');//#444');
+            g.addColorStop(1,'rgba(0, 0, 0, 0.7)');//'#222');
+            c.fillStyle=g;
+
     
     function draw(){
 
@@ -87,34 +91,24 @@ if (canvas.getContext){
             f = ((i%(speed+1))*(1/speed)),//m3/3000,
             switchFrom = antiClockwise ? 1:0, 
             switchTo = antiClockwise? 0:1;
-        if (f==switchFrom){//switchFrom) {
-            f=switchTo;//switchTo; //switchFrom) f=switchTo;//0.01;
-            //console.log(f);
-            //console.log(antiClockwise);
+        if (f==switchFrom){
+
+            f=switchTo;
+
         }
         label.textContent = (parseInt(f*100) + '%');
-        var    start=Math.PI/4,
+
+        var start=Math.PI/4,
             change =f*(2*Math.PI)+start,
             revolution = parseInt(i/(speed));
-        //console.log(antiClockwise);
-        //console.log(fi);
-        if(fi==0){
-            //showIt=false;
-        }
-       // console.log(change);
-        if(showIt)// && !stillDontShowIt)
-        {
+
 
             var c2 = document.getElementById('canvas').getContext('2d');
-           //c2.fillStyle="#c82124";//'white';
-            //console.log(c.fillStyle);
+
             c2.beginPath();
             c2.moveTo(cx,cy);
             c2.lineTo(a+cx, a+cy);
-            //c.lineTo(24,24);
-            //c.lineTo(30,20);
-            //Better to simply rotate the thing
-            //c.fillStyle='white';
+
             c2.arc(l,l,l/2,start,change, antiClockwise);
             c2.closePath();
             c2.fillStyle=g;//"orange";//'white';
@@ -145,27 +139,15 @@ if (canvas.getContext){
             image.height=image.height/2;
             c.drawImage(image,0,0);
             c.restore();
-        }
-        if (fi==0) {//revolution%2==0) {
-            //console.log('changed------');
+            
+        if (fi==0) {
             antiClockwise = !antiClockwise; 
-            //stillDontShowIt=false;
-            //console.log(start);
-            //console.log(change);
-//            console.log(antiClockwise);
-            //showIt=false;
         }
-        //c.moveTo(20,20);
-        //c.drawImage(image,20,20);
-        //if (!showIt) { stillDontShowIt=true }
-        showIt=true;
     }
     
-    //15 fps
     image.onload=function(){
-    int=setInterval(draw, (1000/speed));
-    //setTimeout(function() { clearInterval(int); },10000);
-    //i=15; draw();
-};
+            int=setInterval(draw, (1000/speed));
+
+    };
     
 }</script></body></html>

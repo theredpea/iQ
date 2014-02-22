@@ -9,6 +9,43 @@ getInvertedKey = function(obj) {
 	return obj.name;
 };
 
+//From original iQ.js; use the * = contains, ^ = startswith, $ = endswith
+element = function (elementQueryString) {
+
+    if(elementQueryString.indexOf(':')>-1)
+    {
+        elementQueryStringParts = elementQueryString.split(':');
+        prefix = elementQueryStringParts[0];
+        elementQueryString= elementQueryStringParts[1];
+        this.queryObject = prefix;
+        this.filterFunc = this.prefixIs
+        this.result();
+    }
+
+    queryOptions = {
+        '*' : this.elementContains,
+        '^' : this.elementStartsWith,
+        '$' : this.elementEndsWith
+    }
+
+    if (elementQueryString=='')
+    {
+        return this;
+    }
+    else
+    {
+        
+        var firstChar = elementQueryString.slice(0,1);
+        this.filterFunc= queryOptions[firstChar] || this.elementIs;
+        this.queryObject = elementQueryString.replace(/[\*\^\$]/g, '');
+
+
+        
+        return this.result();
+    }
+    
+}
+
 init = function(args){
 	//Defaults
 	if (!self.initted){ //Backbone has a _once event that is useful here

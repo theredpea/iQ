@@ -1,12 +1,14 @@
 //From http://www.pelagodesign.com/blog/2009/05/20/iso-8601-date-validation-that-doesnt-suck/
+/*
 requirejs.config({
   paths: {
     'iQ': '../../iQ2',
     'Q': '../../scripts/q'
   }
 });
+*/
 
-requirejs(['iQ', 'DateExp',  'DateExps', 'PointExp'], function(iQ, DateExp, DateExps, PointExp){
+requirejs([ 'DateExp',  'DateExps', 'PointExp'], function(DateExp, DateExps, PointExp){
 
 Tests = {};
 
@@ -79,19 +81,14 @@ Tests.shouldNotWork = ['200905',
 
 //TODO Separate table for Durations?
 Tests.instanceTests = function(){
-	tbody = iQ.firstNode('tbody');
+	tbody = document.querySelector('tbody');
+	testHtml = [];
 	Tests.shouldWork.concat(Tests.shouldNotWork).forEach(function(e,i,a){
 		var should=false,
 			fail=false;
 
 		if (i<Tests.shouldWork.length) should=true;
 
-		if (should) { 
-			if (!DateExps.ISO_8601_POINT.test(e)) {
-				console.log('false negative with ' + e); fail=true;}}
-		else { 
-			if (DateExps.ISO_8601_POINT.test(e)) {
-				console.log('false positive with ' + e); fail=true;} }
 
 		var match = e.match(DateExps.ISO_8601_POINT),
 			matchLength = match ? match.length : 0,
@@ -113,16 +110,17 @@ Tests.instanceTests = function(){
 
 		try{isoString=onValue.jsDate.toISOString(); } 
 			catch(e){}
-		tbody.innerHTML+='<tr class="'+ isoString +' '+ passFailString + '"><td class="'+shouldString+'">'+shouldString+
+		testHtml.push('<tr class="'+ isoString +' '+ passFailString + '"><td class="'+shouldString+'">'+shouldString+
 									'</td><td>'+e+
 									'</td><td>'+partsList.join(',')+
 									'</td><td class="pass-fail">'+passFailString+ 
 									'</td><td>'+isoString+
 									'</td><td>'+specificityInt+
 									'</td><td>'+specificity+
-									'</td></tr>';
+									'</td></tr>');
 
 	}); 
+	tbody.innerHTML = testHtml.join('');
 }
 
 Tests.durationTests = function(){

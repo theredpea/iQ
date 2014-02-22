@@ -77,7 +77,7 @@ iQ.andOrPostings
 
 
 iQ._workerFileName = function(type){
-	return 'workers/' + type + '.js';
+	return '/workers/' + type + '.js';
 };
 
 iQ._workerName = function(type){
