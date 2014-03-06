@@ -4,6 +4,13 @@ define('iQ', ['Q'], function(Q){
 
 iQ = function(options){
     //From Original iQ.js
+    if (!(this instanceof iQ))   //http://ejohn.org/blog/simple-class-instantiation/
+        return new iQ(options);
+    
+    this.options = {
+        and_or: 'and'        
+    };
+
    /*this.o = $.extend(
                     {
                         url: 'http://www.xbrl.org/inlinexbrlextractortutorial/MassiveDynamic.html',
@@ -16,13 +23,6 @@ iQ = function(options){
                     },
                     oOptions)
         */
-    if (!(this instanceof iQ))   //http://ejohn.org/blog/simple-class-instantiation/
-        return new iQ(options);
-    
-    this.options = {
-        and_or: 'and'        
-    };
-
     for (option in options) this.options[option] = options[option]; //Extend
 
     //Push onto this list when running a query like name('cash')
@@ -47,7 +47,7 @@ iQ._shunting = function(inputs){
             var topOperator = operatorStack.pop();
             if (topOperator){
                 //If existing operator beats new operator
-                if iQ._precedes(topOperator, input.and_or){
+                if (iQ._precedes(topOperator, input.and_or)){
 
                     outputs(outputs.push(setWorker(outputs.pop(), input, topOperator)))
 
