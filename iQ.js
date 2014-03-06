@@ -31,12 +31,87 @@ iQ = function(options){
 
     };
 
+iQ._shunting = function(inputs){
+
+    var outputs=[],
+        operatorStack=[];
+
+    inputs.forEach(function(input,index,a){
+        outputs.push(input);
+        if (index==0){
+            //To push the second input onto outputs directly
+            return;
+        } else{
+            //Empty list; i.e. first time returns undefined
+            //Undefined 
+            var topOperator = operatorStack.pop();
+            if (topOperator){
+                //If existing operator beats new operator
+                if iQ._precedes(topOperator, input.and_or){
+
+                    outputs(outputs.push(setWorker(outputs.pop(), input, topOperator)))
+
+                } else{
+                    //Push it back on, followed by the next 
+                    operatorStack.push(topOperator);
+                }
+            }
+            operatorStack.push(input.and_or);
+        }
+    });
+
+iQ._opPrecedenceIndex = [
+//boolean
+'and',
+'or',
+//arithmetic
+
+];
+
+iQ._opAssociativityMap = {
+    and: 'left',
+    or: 'left'
+};
+
+iQ._precedes = function(a,b){
+    var aindex=iQ._opPrecedenceIndex.indexOf(a),
+        bindex = iQ._opPrecedenceIndex.indexOf(b);
+
+    return  aindex==bindex ? iQ._isLeftAssociative(a) :  aindex > bindex;
+};
+iQ._isLeftAssociative = function(a){
+    return iQ._opAssociativityMap[a] && iQ._opAssociativityMap[a]=='left';
+}
+// Read a token.
+// If the token is a number, then add it to the output queue.
+// If the token is a function token, then push it onto the stack.
+// If the token is a function argument separator (e.g., a comma):
+// Until the token at the top of the stack is a left parenthesis, pop operators off the stack onto the output queue. If no left parentheses are encountered, either the separator was misplaced or parentheses were mismatched.
+// If the token is an operator, o1, then:
+// while there is an operator token, o2, at the top of the stack, and
+// either o1 is left-associative and its precedence is equal to that of o2,
+// or o1 has precedence less than that of o2,
+// pop o2 off the stack, onto the output queue;
+// push o1 onto the stack.
+// If the token is a left parenthesis, then push it onto the stack.
+// If the token is a right parenthesis:
+// Until the token at the top of the stack is a left parenthesis, pop operators off the stack onto the output queue.
+// Pop the left parenthesis from the stack, but not onto the output queue.
+// If the token at the top of the stack is a function token, pop it onto the output queue.
+// If the stack runs out without finding a left parenthesis, then there are mismatched parentheses.
+// When there are no more tokens to read:
+// While there are still operator tokens in the stack:
+// If the operator token on the top of the stack is a parenthesis, then there are mismatched parentheses.
+// Pop the operator onto the output queue.
+};
+
 iQ.prototype.get = function(onFulfilled,onRejected, onProgress){
     var results =[];
     if (this.queryDeferreds && this.queryDeferreds.reduce){
 
         //https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/Reduce
         results = this.queryDeferreds
+                //.sort(function(a,b){ iQ.}) http://www.w3schools.com/jsref/jsref_sort.asp
                 .map(function(el, index){ return el.promise; })
                 .reduce(function(previousPromise, currentPromise, index, queryPromises){
 
@@ -171,16 +246,13 @@ iQ._deferredWorkResponseCallback = function(e){
 
 };
 
-/*
-PromiseWorker = function(){
-    Worker.apply(this, arguments);
-};
-PromiseWorker.prototype = Worker.prototype;
-*/
-
-//Should the args by an object?
 Worker.prototype.deferredWork = function(method, args, hashable){
-                        //Each worker has a list;
+    /* method: <string> name of method attached to the Worker; 
+            'getPostings' for a queryableWorker; or 'and' / 'or' for setWorker
+        args: <object> a "keyword" map of arguments used by the method;
+        hashable: <string> a unique identifier; 
+            i.e. so the Worker can connect the request with its response 
+            example: a stringnified query ('cash')*/
 
     var hash = iQ._stringHash(hashable),
         index,
@@ -260,7 +332,8 @@ iQ._workerSetup = function(){
         //Queryable Workers
         //========================
         iQ._queryableWorkers.forEach(function(type){
-                type = type.split('/').slice(-1)[0]; //For utility/set...nah shouldn't be in here
+
+                type = type.split('/').slice(-1)[0];
 
                 var workerName = iQ._workerName(type),
                     worker = iQ[workerName];
