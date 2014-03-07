@@ -1,6 +1,9 @@
-//importScripts('utility/set.js');
+'use strict';
 
-Base = { 
+importScripts('../scripts/require.js');
+
+
+define({
     onMessage: function(event){
                     this.init(event.data.args);
                     //throw JSON.stringify(this.invertedIndex == undefined)_;
@@ -165,14 +168,9 @@ Base = {
 				depth:, 
 				*/
 			};
-	}
+	},
 
-
-
-};
-
-
-reGet = function(arg, obj) { 
+reGet : function(arg, obj) { 
         if (typeof(arg)==typeof('string')) 
             return reGet(arg.split('.'), obj) 
         else if (typeof(arg)==typeof([])) { 
@@ -182,12 +180,12 @@ reGet = function(arg, obj) {
                     return reGet(arg.splice(1), obj[arg[0]])
 
             }
-    }
+    },
 
 
 //Input: Keys/refs representing the main aspect of this worker
 //Output: Objects that that may be filtered and subsequently re-mapped into even smaller indexes
-aspectMapper = function(k){ 
+aspectMapper : function(k){ 
 			//Only define aspectIndex if you need to map something like
 					//string object, ISO date
 					//into complex DateContext
@@ -198,20 +196,16 @@ aspectMapper = function(k){
 			//Need to hold onto the key because we'll put it through invertedIndexMapper
 			//To map from keys back to  the results; IDs of value locations
 			return { key: k, aspect: aspect };
-};
+},
 
-invertedIndexMapper = function(object){
+invertedIndexMapper : function(object){
 		if (object.key) return this.invertedIndex[object.key] || object;
 		else return this.invertedIndex[object] || object;
-	};
+	},
 //This is an identity function; 
-vocabMapper = function(object){
+vocabMapper : function(object){
 		return object.key ? object.key : object;
 
-	};
-
-
-Base.reGet = reGet;
-Base.aspectMapper = aspectMapper;
-Base.invertedIndexMapper = invertedIndexMapper;
-Base.vocabMapper = vocabMapper;
+	}
+}
+);

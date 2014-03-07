@@ -1,8 +1,16 @@
+'use strict';
 
-importScripts('base.js');
-importScripts('aspects/DateExp.js');
+importScripts('../scripts/require.js');
 
-self.prototype = self.Base;
+define({
+	baseUrl:'./'
+}, ['base', 'dateExp'], function(base, dateExp){
+//importScripts('base.js');
+//importScripts('aspects/DateExp.js');
+
+
+
+self.prototype = base;
 //If this setup becomes long; move to Base init()
 addEventListener('message', function(event){ self.prototype.onMessage.call(self,event) }, false);
 
@@ -39,3 +47,6 @@ matches = function(args){
 							event.data.queryValue
 							: new RegExp(event.data.queryValue)
 }
+
+
+})

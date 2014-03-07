@@ -1,14 +1,10 @@
-define('DateExp', [], function(){
+define(function(){
 
 	DateExp = function(s, options){
 		this.s = s;
 		this.optionString = options;
 
-
-
-
 		//A router 
-
 		var pointMatch = DateExps.MatchesExpOrExpRange(s, DateExps.ISO_8601_POINT),
 			durMatch = DateExps.MatchesExpOrExpRange(s, DateExps.ISO_8601_DURATION);
 
@@ -39,20 +35,14 @@ define('DateExp', [], function(){
 
 		}*/
 
-		
-
-
-				
 
 	};
-
 
 	/*
 	DateExp.prototype.match = function(dateContext){
 
 	}
 	*/
-
 
 	DateExp.prototype.test = function(dateContext){
 
