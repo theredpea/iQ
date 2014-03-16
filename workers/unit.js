@@ -1,6 +1,6 @@
 'use strict';
 
-importScripts('../scripts/require.js');
+importScripts('scripts/require.js');
 
 define(['./base'], function(base){
 
