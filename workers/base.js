@@ -123,7 +123,6 @@ Base = {
 						var evalArg = eval(query);
 						if (typeof(evalArg) == 'function');
 						filterFunc = evalArg;
-                        self.postMessage
 					}
 					catch(e){
                         //Or normal strings which have their own expressional meaning (ie regExp,dateExp)
