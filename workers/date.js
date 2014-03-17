@@ -17,7 +17,6 @@ stringFilter = function(query){
 	var dExp = new DateExp(query);
 
 	return function(object){
-
 		return dExp.test(object.aspect);
 	}
 }

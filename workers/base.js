@@ -4,6 +4,9 @@ Base = {
                     //throw JSON.stringify(this.invertedIndex == undefined)_;
                     var method = event.data.method;
 
+                    this.workHash = event.data.workHash;
+                    this.query = event.data.query;
+                    this.args = event.data;
 
                     if (method in this || method in this.prototype)
                     {
@@ -106,43 +109,72 @@ Base = {
 
 	getPostings : function(args){
 			var query = args.query || args[0],
-				filterFunc = function(object){ return true; },
-				identityFunc = this.aspectMapper || aspectMapper, //function(object){ return object; },
-				resultsFunc = args.vocab || invertedIndexMapper, // || //function(object) { return object},
+				filterFunc = function(o){ return true; },
+                identityFunc = function(o) {return o; },
+				mapFunc =       this.aspectMapper || aspectMapper, 
+				resultsFunc =   args.vocab || invertedIndexMapper,
 				that = this;
-
+                //Defaulting
+                filterFunc = identityFunc;
+                //Currently we only support strings, but...
 				if (typeof(query) == 'string'){
-
 					try{
+                        //They can be stringified eval-able functions...
 						var evalArg = eval(query);
 						if (typeof(evalArg) == 'function');
 						filterFunc = evalArg;
-
+                        self.postMessage
 					}
 					catch(e){
-						//console.log('not a function, just a string?' + query);
-
+                        //Or normal strings which have their own expressional meaning (ie regExp,dateExp)
 						filterFunc = this.stringFilter(query, args);
 					}
 				}
-					//throw(new String(filterFunc));
-					//throw (new String(identityFunc));
+				var keys = Object.keys(self.invertedIndex);
+                var keyLength = keys.length;
+                var keyMatches = keys
+                                //aspectMapper by default; inflates the object
+								.map(mapFunc)				
+								.filter(this
+                                    .prototype
+                                    .filterProgress(filterFunc, keyLength)),
+				
+                //results could be IDs, which are set-operated into a resultset in main.js
+				//Or results could be something else; vocabulary for a type-ahead
+				results = keyMatches
+								.map(resultsFunc);
 
-					var keyMatches = Object.keys(self.invertedIndex)
-									.map(identityFunc)				//aspectMapper by default; inflates the object
-									.filter(filterFunc),
-					//results could be IDs, which are set-operated into a resultset in main.js
-					//Or results could be something else; vocabulary for a type-ahead
-					results = keyMatches
-									.map(resultsFunc);
-				//throw(new String(self.and));
-                //TODO: How does or work? Shouldn't main script handle "and/or"ing
-                args.results = results;//self.or.apply(this,results);
+                args.results = results;
 
 				self.postMessage(args);
 	},
+    filterProgress: function(filterFunc,total){
+        //Measures and sends info about progress
+        var count=0;
+        var that = self;
+        var accumulated = [];
 
+        return function(object){
+            if (filterFunc(object)){
+                count++;
+                accumulated.push(object)
+                that.prototype.sendProgress(count/total, results);
+                return true;
+            }
+        }
 
+    },
+    sendProgress : function(pct, results){
+        //What percentage of overall progress 
+        self.args.pct = pct;
+        //Accumualted results
+        self.args.results = results;
+
+        self.postMessage({   
+            method:     'progress',
+            args :      self.args,
+        });
+    },
 	getStats : function(){
 			return {
 				/*count: ,

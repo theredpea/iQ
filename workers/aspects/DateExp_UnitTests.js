@@ -119,13 +119,13 @@ Tests.instanceTests = function(){
 		_aspectProvider : Tests._aspectProvider
 	});
 
-	Tests.shouldWork.concat(Tests.shouldNotWork).forEach(function(e,i,a){
+	iQ().date(e).get(
 		var should=false,
 			fail=false;
 
 		if (i<Tests.shouldWork.length) should=true;
 		var dateMatches = iQ().date(e).get(function(results){
-			var fail = true;
+			fail = true results.;
 		})
 
 		var match = e.match(DateExps.ISO_8601_POINT),

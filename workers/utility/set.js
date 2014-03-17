@@ -27,10 +27,16 @@ self.sortArgsLengthAscending = function(argumentsFromAnotherFunction){
 
  function lengthAscending(i,j){return i.length-j.length;};
 
-self.flatten = function(twoDimArray){
+self._flatten = function(twoDimArray){
     //http://stackoverflow.com/questions/10865025/merge-flatten-an-array-of-arrays-in-javascript
     var flattened = [];
     return flattened.concat.apply(flattened, twoDimArray);
+};
+
+self.flatten = function(args){
+	var results =  self._flatten(args.list);
+	args.results = results;
+ 	self.postMessage(args);
 };
 
 self.flattenArgs = function(args){
