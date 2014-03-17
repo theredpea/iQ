@@ -90,7 +90,7 @@ Tests._aspectProvider = function(){
                 entity: {
                     identifier: "TEST",
                     scheme: "TEST"
-                }
+                },
                 id: e,
                 index: i,
                 period: {
@@ -111,38 +111,41 @@ Tests._aspectProvider = function(){
 };
 //TODO Separate table for Durations?
 Tests.instanceTests = function(){
-	tbody = document.querySelector('tbody');
-	testHtml = [];
+
+	tbody = iQ.firstNode('tbody');
+
 	//Dependency injection
 	iQ && iQ._init && iQ._init({
 		_indexProvider	: Tests._indexProvider,
 		_aspectProvider : Tests._aspectProvider
 	});
 
-	iQ().date(e).get(
-		var should=false,
-			fail=false;
+    Tests.shouldWork.forEach(function(e,i,a){ 
 
-		if (i<Tests.shouldWork.length) should=true;
-		var dateMatches = iQ().date(e).get(function(results){
-			fail = true results.;
-		})
+		iQ()
+			.date(e)
+			.get(function(args){
 
-		var match = e.match(DateExps.ISO_8601_POINT),
-			matchLength = match ? match.length : 0,
-			passFailString = fail ? 'fail': 'pass',
-			isoString='false';
+			var should=(i<Tests.shouldWork.length),
+				fail=false,
+				//Old tests
+				match = e.match(DateExps.ISO_8601_POINT),
+				matchLength = match ? match.length : 0,
+				//New test; testing iQ results
+				passFailString = args.results.length==1 ?  'pass' : 'fail',
+				isoString='false';
 
-		try{
-			isoString=new Date(e).toISOString(); } 
+			try{
+				isoString=new Date(e).toISOString(); } 
 			catch(e){}
-		testHtml.push('<tr class="'+ isoString +' '+ passFailString + '"><td class="'+shouldString+'">'+shouldString+
-									'</td><td>'+e+
-									'</td><td class="pass-fail">'+passFailString+ 
-									'</td></tr>');
+				tbody.innerHTML ++
+					'<tr class="'+ isoString +' '+ passFailString + '"><td class="'+shouldString+'">'+shouldString+
+						'</td><td>'+e+
+						'</td><td class="pass-fail">'+passFailString+ 
+						'</td></tr>';
 
-	}); 
-	tbody.innerHTML = testHtml.join('');
+		}); 
+	});
 }
 
 Tests.durationTests = function(){

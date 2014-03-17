@@ -13,7 +13,7 @@ getInvertedKey = function(obj) {
 
 //Takes a string, produces a function which acts on the object;
 stringFilter = function(query){
-	throw(self.aspectIndex);
+	
 	var dExp = new DateExp(query);
 
 	return function(object){
