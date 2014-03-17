@@ -1,14 +1,4 @@
 //From http://www.pelagodesign.com/blog/2009/05/20/iso-8601-date-validation-that-doesnt-suck/
-/*
-requirejs.config({
-  paths: {
-    'iQ': '../../iQ2',
-    'Q': '../../scripts/q'
-  }
-});
-*/
-
-requirejs([ 'DateExp',  'DateExps', 'PointExp'], function(DateExp, DateExps, PointExp){
 
 Tests = {};
 
@@ -79,44 +69,76 @@ Tests.shouldNotWork = ['200905',
 '2010-02-18T16:23.33.600',
 '2010-02-18T16,25:23:48,444'];
 
+Tests._indexProvider = function(){
+    var indexMap = {};
+    Tests.shouldWork.forEach(function(e,i,a){ 
+    	indexMap[e]= {
+                contextRef: e,
+                index: i,
+                ixType: "IX:NONNUMERIC",
+                name: "test:date",
+                value: e
+            };
+    });
+    return indexMap;
+};
+
+Tests._aspectProvider = function(){
+    var dateMap = {};
+    Tests.shouldWork.forEach(function(e,i,a){ 
+    	dateMap[e] = {
+                entity: {
+                    identifier: "TEST",
+                    scheme: "TEST"
+                }
+                id: e,
+                index: i,
+                period: {
+                    endDate: undefined,
+                    endDateDate: undefined,
+                    instant: e,
+                    instantDate: Date(e),
+                    startDate: undefined,
+                    startDateDate: undefined
+                },
+                segment: {}
+            };
+
+	});
+	//Only testing dateWorker
+	return { date : dateMap };
+
+};
 //TODO Separate table for Durations?
 Tests.instanceTests = function(){
 	tbody = document.querySelector('tbody');
 	testHtml = [];
+	//Dependency injection
+	iQ && iQ._init && iQ._init({
+		_indexProvider	: Tests._indexProvider,
+		_aspectProvider : Tests._aspectProvider
+	});
+
 	Tests.shouldWork.concat(Tests.shouldNotWork).forEach(function(e,i,a){
 		var should=false,
 			fail=false;
 
 		if (i<Tests.shouldWork.length) should=true;
-
+		var dateMatches = iQ().date(e).get(function(results){
+			var fail = true;
+		})
 
 		var match = e.match(DateExps.ISO_8601_POINT),
 			matchLength = match ? match.length : 0,
-			//matchString = match ? match.join(',') : '',
-			dateExp = new DateExp(e, 'f'),
-			isoString = 'false',
 			passFailString = fail ? 'fail': 'pass',
-			partsList =[],
-			specificity = '--',
-			specificityInt = 0,
-			shouldString = should ? 'Should': 'Not',
-			onValue = (dateExp.onValue || dateExp.fuzzyOnValue);
+			isoString='false';
 
-		if (onValue){
-			partsList = 		dateExp.startValue.getPartsList(); //partsList; //onValue.partsList; 	//Using onValue
-			specificity = 		onValue.specificity,
-			specificityInt = 	onValue.specificityInt
-		}
-
-		try{isoString=onValue.jsDate.toISOString(); } 
+		try{
+			isoString=new Date(e).toISOString(); } 
 			catch(e){}
 		testHtml.push('<tr class="'+ isoString +' '+ passFailString + '"><td class="'+shouldString+'">'+shouldString+
 									'</td><td>'+e+
-									'</td><td>'+partsList.join(',')+
 									'</td><td class="pass-fail">'+passFailString+ 
-									'</td><td>'+isoString+
-									'</td><td>'+specificityInt+
-									'</td><td>'+specificity+
 									'</td></tr>');
 
 	}); 
@@ -178,5 +200,3 @@ Tests.shouldNotWork.forEach(function(e,i,a){
 		//input: "2010-02-18T16:23:48,444"] 							[1]
 		Tests.instanceTests();
 		Tests.durationTests();
-	return Tests;
-})

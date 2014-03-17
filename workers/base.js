@@ -173,18 +173,18 @@ reGet = function(arg, obj) {
 
 //Input: Keys/refs representing the main aspect of this worker
 //Output: Objects that that may be filtered and subsequently re-mapped into even smaller indexes
-	aspectMapper = function(k){ 
-				//Only define aspectIndex if you need to map something like
-						//string object, ISO date
-						//into complex DateContext
-				aspect = (this.aspectIndex 
-						&& this.aspectIndex.indexOf(k)>-1) ?
-							this.aspectIndex[k]
-							: k;
-				//Need to hold onto the key because we'll put it through invertedIndexMapper
-				//To map from keys back to  the results; IDs of value locations
-				return { key: k, aspect: aspect };
-	};
+aspectMapper = function(k){ 
+			//Only define aspectIndex if you need to map something like
+					//string object, ISO date
+					//into complex DateContext
+			aspect = (this.aspectIndex 
+					&& this.aspectIndex.indexOf(k)>-1) ?
+						this.aspectIndex[k]
+						: k;
+			//Need to hold onto the key because we'll put it through invertedIndexMapper
+			//To map from keys back to  the results; IDs of value locations
+			return { key: k, aspect: aspect };
+};
 
 invertedIndexMapper = function(object){
 		if (object.key) return this.invertedIndex[object.key] || object;
