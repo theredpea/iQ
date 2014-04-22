@@ -128,9 +128,6 @@ Tests.instanceTests = function(){
 
 			var should=(i<Tests.shouldWork.length),
 				fail=false,
-				//Old tests
-				match = e.match(DateExps.ISO_8601_POINT),
-				matchLength = match ? match.length : 0,
 				//New test; testing iQ results
 				passFailString = args.results.length==1 ?  'pass' : 'fail',
 				isoString='false';

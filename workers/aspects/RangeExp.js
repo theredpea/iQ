@@ -89,7 +89,7 @@ RangeExp.MatchesExpOrExpRange = function(s, exp, rangeSymbol){
 
 	return  s.match(exp) || s.match(DateExps.RANGED(exp, rangeSymbol));
 			//exp is length 1; the part at  [0]
-			//ranged is length 3; [1] and [2]
+			//RANGED(exp) is length 3; [1] and [2]
 }
 
 

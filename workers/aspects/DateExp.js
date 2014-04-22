@@ -5,8 +5,8 @@ DateExp = function(s, options){
 	this.optionString = options;
 
 	//A router 
-	var pointMatch = DateExps.MatchesExpOrExpRange(s, DateExps.ISO_8601_POINT),
-		durMatch = DateExps.MatchesExpOrExpRange(s, DateExps.ISO_8601_DURATION);
+	var pointMatch = PointExp.matches(s), //RangeExpDateExps.MatchesExpOrExpRange(s, DateExps.ISO_8601 POINT),
+		durMatch = DurExp.matches(s); //DateExps.MatchesExpOrExpRange(s, DateExps.ISO_8601 DURATION);
 
 	if(pointMatch && pointMatch.length>-1){
 		this.exp = new PointExp(s, options); //new PointExp().constructor.apply(this, [s, options]); 
