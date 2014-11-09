@@ -1727,7 +1727,7 @@ In&nbsp;[5]:
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
 <div class="prompt input_prompt">
-In&nbsp;[12]:
+In&nbsp;[3]:
 </div>
 <div class="inner_cell">
     <div class="input_area">
@@ -1751,7 +1751,7 @@ In&nbsp;[12]:
 <div class="output_area"><div class="prompt"></div>
 <div class="output_subarea output_stream output_stdout output_text">
 <pre>
-C:\Anaconda3\Lib\arelle\Arelle
+C:\Anaconda3
 C:\Anaconda3\Lib\arelle\Arelle
 
 </pre>
@@ -1765,7 +1765,44 @@ C:\Anaconda3\Lib\arelle\Arelle
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
 <div class="prompt input_prompt">
-In&nbsp;[13]:
+In&nbsp;[4]:
+</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class="highlight"><pre><span class="c">#Make sure this returns True</span>
+<span class="c">#If it doesn&#39;t, repeat the above line of code (os.chdir)</span>
+<span class="n">dir_name</span> <span class="o">=</span> <span class="s">&#39;arelle&#39;</span> <span class="k">if</span> <span class="s">&#39;arelle&#39;</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="s">&#39;.&#39;</span><span class="p">)</span> <span class="k">else</span> <span class="s">&#39;Arelle&#39;</span>
+<span class="s">&#39;PythonUtil.py&#39;</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">dir_name</span><span class="p">)</span> <span class="ow">and</span> <span class="s">&#39;Cntlr.py&#39;</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">dir_name</span><span class="p">)</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area"><div class="prompt output_prompt">
+    Out[4]:</div>
+
+
+<div class="output_text output_subarea output_pyout">
+<pre>
+True
+</pre>
+</div>
+
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">
+In&nbsp;[5]:
 </div>
 <div class="inner_cell">
     <div class="input_area">
@@ -1786,7 +1823,81 @@ In&nbsp;[13]:
 <p><a href="http://www.sec.gov/cgi-bin/browse-edgar?CIK=oflx&amp;Find=Search&amp;owner=exclude&amp;action=getcompany">http://www.sec.gov/cgi-bin/browse-edgar?CIK=oflx&amp;Find=Search&amp;owner=exclude&amp;action=getcompany</a></p>
 <h2 id="specifically-10-q-s">Specifically 10-Q&#39;s</h2>
 <p><a href="http://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&amp;CIK=0001317945&amp;type=10-Q&amp;dateb=&amp;owner=exclude&amp;count=40">http://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&amp;CIK=0001317945&amp;type=10-Q&amp;dateb=&amp;owner=exclude&amp;count=40</a></p>
-<h3 id="yields-">Yields...</h3>
+<h2 id="-edit-">[EDIT]</h2>
+<p>Using Nick Kraakma&#39;s API for filings, I can easily retrieve the last 5 filings for OFLX:</p>
+</div>
+</div>
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">
+In&nbsp;[46]:
+</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class="highlight"><pre><span class="kn">from</span> <span class="nn">urllib.request</span> <span class="kn">import</span> <span class="n">urlopen</span>
+<span class="c">#https://docs.python.org/3.0/library/urllib.request.html</span>
+<span class="kn">from</span> <span class="nn">lxml</span> <span class="kn">import</span> <span class="n">etree</span>
+
+<span class="k">def</span> <span class="nf">get_latest_filings</span><span class="p">(</span><span class="n">ticker</span><span class="p">,</span><span class="n">how_many</span><span class="o">=</span><span class="mi">5</span><span class="p">):</span>
+    <span class="c">#Format a URL with a ticker passed into function</span>
+    <span class="n">url</span> <span class="o">=</span> <span class="s">&#39;https://valuespreadsheet.com/iedgar/results.php?stock={}&amp;output=xml&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">ticker</span><span class="p">)</span>
+    <span class="c">#Parse it using the lxml elementTree API </span>
+    <span class="n">et</span> <span class="o">=</span> <span class="n">etree</span><span class="o">.</span><span class="n">fromstring</span><span class="p">(</span><span class="n">urlopen</span><span class="p">(</span><span class="n">url</span><span class="p">)</span><span class="o">.</span><span class="n">read</span><span class="p">())</span>
+    <span class="c">#Return the instanceUrl for each filing the list</span>
+    <span class="k">return</span> <span class="p">[</span><span class="n">_</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s">&#39;instanceUrl&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">text</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="n">et</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s">&#39;filings&#39;</span><span class="p">)[:</span><span class="nb">min</span><span class="p">(</span><span class="n">how_many</span><span class="p">,</span><span class="nb">len</span><span class="p">(</span><span class="n">et</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s">&#39;filings&#39;</span><span class="p">)))]]</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing code_cell rendered">
+<div class="input">
+<div class="prompt input_prompt">
+In&nbsp;[48]:
+</div>
+<div class="inner_cell">
+    <div class="input_area">
+<div class="highlight"><pre><span class="n">ticker</span> <span class="o">=</span> <span class="s">&#39;OFLX&#39;</span>
+<span class="n">oflx_xbrl_filings_past_4_quarters</span> <span class="o">=</span> <span class="n">get_latest_filings</span><span class="p">(</span><span class="n">ticker</span><span class="p">)</span>
+<span class="n">oflx_xbrl_filings_past_4_quarters</span>
+</pre></div>
+
+</div>
+</div>
+</div>
+
+<div class="output_wrapper">
+<div class="output">
+
+
+<div class="output_area"><div class="prompt output_prompt">
+    Out[48]:</div>
+
+
+<div class="output_text output_subarea output_pyout">
+<pre>
+[&apos;http://www.sec.gov/Archives/edgar/data/1317945/000137647414000276/oflx-20140630.xml&apos;,
+ &apos;http://www.sec.gov/Archives/edgar/data/1317945/000137647414000144/oflx-20140331.xml&apos;,
+ &apos;http://www.sec.gov/Archives/edgar/data/1317945/000137647414000050/oflx-20131231.xml&apos;,
+ &apos;http://www.sec.gov/Archives/edgar/data/1317945/000137647413000520/oflx-20130930.xml&apos;,
+ &apos;http://www.sec.gov/Archives/edgar/data/1317945/000137647413000401/oflx-20130630.xml&apos;]
+</pre>
+</div>
+
+</div>
+
+</div>
+</div>
+
+</div>
+<div class="cell border-box-sizing text_cell rendered">
+<div class="prompt input_prompt">
+</div>
+<div class="inner_cell">
+<div class="text_cell_render border-box-sizing rendered_html">
 <h1 id="step-1-open-the-filing">Step 1: Open the filing</h1>
 </div>
 </div>
@@ -1794,20 +1905,11 @@ In&nbsp;[13]:
 <div class="cell border-box-sizing code_cell rendered">
 <div class="input">
 <div class="prompt input_prompt">
-In&nbsp;[16]:
+In&nbsp;[49]:
 </div>
 <div class="inner_cell">
     <div class="input_area">
-<div class="highlight"><pre><span class="n">oflx_xbrl_filings_past_4_quarters</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;http://www.sec.gov/Archives/edgar/data/1317945/000137647414000276/oflx-20140630.xml&#39;</span><span class="p">,</span>
-                                     <span class="s">&#39;http://www.sec.gov/Archives/edgar/data/1317945/000137647414000144/oflx-20140331.xml&#39;</span><span class="p">,</span>
-                                     <span class="c">#This one is a 10-K</span>
-                                     <span class="s">&#39;http://www.sec.gov/Archives/edgar/data/1317945/000137647414000050/oflx-20131231.xml&#39;</span><span class="p">,</span>
-                                     
-                                     <span class="s">&#39;http://www.sec.gov/Archives/edgar/data/1317945/000137647413000520/oflx-20130930.xml&#39;</span><span class="p">,</span>
-                                     <span class="s">&#39;http://www.sec.gov/Archives/edgar/data/1317945/000137647413000401/oflx-20130630.xml&#39;</span>
-                                     <span class="p">]</span>
-
-<span class="n">oflx_xbrl_filing_last_q</span> <span class="o">=</span> <span class="n">oflx_xbrl_filings_past_4_quarters</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<div class="highlight"><pre><span class="n">oflx_xbrl_filing_last_q</span> <span class="o">=</span> <span class="n">oflx_xbrl_filings_past_4_quarters</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
 <span class="n">arelle_oflx_last_q</span> <span class="o">=</span> <span class="n">Cntlr</span><span class="o">.</span><span class="n">Cntlr</span><span class="p">()</span><span class="o">.</span><span class="n">modelManager</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">oflx_xbrl_filing_last_q</span><span class="p">)</span>
 </pre></div>
 
